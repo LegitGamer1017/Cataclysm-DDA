@@ -419,6 +419,14 @@ else
   GCC_MAJOR := $(shell $(CROSS)$(OS_COMPILER) -dumpversion 2>/dev/null | cut -d. -f1)
   ifeq ($(shell expr $(GCC_MAJOR) \>= 16 2>/dev/null), 1)
     CXX_WARNINGS += -Wno-error=sfinae-incomplete
+    # GCC 16 -Warray-bounds false positive on make_shared_fast (memory_fast.h)
+    # with structs containing function pointers (e.g. VehicleFunction_builtin).
+    WARNINGS += -Wno-error=array-bounds=
+    # GCC 16 -Wmaybe-uninitialized false positive in libstdc++ find/find_if over
+    # custom iterators (e.g. vehicle_part_iterator in veh_interact.cpp).
+    WARNINGS += -Wno-error=maybe-uninitialized
+    # GCC 16 -Wstringop-overflow false positive in the same code paths.
+    WARNINGS += -Wno-error=stringop-overflow=
   endif
 endif
 
