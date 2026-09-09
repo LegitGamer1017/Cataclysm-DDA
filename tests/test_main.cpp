@@ -330,11 +330,13 @@ TEST_CASE( "noop_test", "[.]" )
 // NOLINTNEXTLINE(bugprone-exception-escape): test runner intentionally lets exceptions propagate
 int main( int argc, const char *argv[] )
 {
-#ifdef _WIN32
+#if defined(_MSC_VER)
     // Suppress the "Microsoft Visual C++ Runtime Library" abort dialog so that
     // a raw assert() in any third-party header (e.g. plf colony/list, flatbuffers)
     // cannot hang headless CI test runs. The Cataclysm test vcxproj does not
     // define NDEBUG for Release, so asserts are live in CI binaries.
+    // Guarded on _MSC_VER (not _WIN32): _set_abort_behavior is MSVC CRT-only
+    // and undefined on MinGW, which would fail the test-binary link.
     _set_abort_behavior( 0, _CALL_REPORTFAULT | _WRITE_ABORT_MSG );
 #endif
     cata::init_allocator();
