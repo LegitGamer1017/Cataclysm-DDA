@@ -1,0 +1,11 @@
+[
+  {
+    "id": "qi_sense",
+    "type": "mutation",
+    "name": "Qi Sense",
+    "description": "You can perceive the ambient Qi saturating the post-Cataclysm world.  Without this awakening, gathered Qi is just pressure behind the eyes; with it, meditation converts that pressure into usable power.",
+    "points": 0,
+    "valid": false,
+    "purifiable": false
+  }
+]

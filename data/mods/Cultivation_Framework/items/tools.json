@@ -1,0 +1,22 @@
+[
+  {
+    "id": "cult_jade_slip_menu",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "category": "tools",
+    "name": { "str": "jade slip" },
+    "description": "A cool slip of carved jade.  It hums faintly when held, as if something within stirs.",
+    "weight": "113 g",
+    "volume": "250 ml",
+    "price": "100 USD",
+    "price_postapoc": "5 USD",
+    "material": [ "stone" ],
+    "symbol": "?",
+    "color": "light_green",
+    "use_action": {
+      "type": "effect_on_conditions",
+      "description": "Focus on the slip",
+      "effect_on_conditions": [ "EOC_CULT_MENU_PROOF", "EOC_CULT_MENU_ROOT" ]
+    }
+  }
+]

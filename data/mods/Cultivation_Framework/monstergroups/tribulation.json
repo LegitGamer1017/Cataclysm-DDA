@@ -1,0 +1,7 @@
+[
+  {
+    "id": "GROUP_CULT_TRIBULATION",
+    "type": "monstergroup",
+    "monsters": [ { "monster": "mon_cult_hound", "weight": 3 }, { "monster": "mon_cult_storm_elem", "weight": 2 } ]
+  }
+]

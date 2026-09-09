@@ -1,0 +1,12 @@
+[
+  {
+    "id": "cult_manual_faded",
+    "copy-from": "book_martial",
+    "looks_like": "manual_karate",
+    "type": "ITEM",
+    "subtypes": [ "BOOK" ],
+    "name": { "str": "Faded Martial Manual" },
+    "description": "A water-stained manual of mortal brawling forms.  Between the diagrams, a different hand has inked breathing exercises that make your eyes ache.  A faded clearance stamp reads: RIVERSIDE DOJO.",
+    "martial_art": "style_brawling"
+  }
+]

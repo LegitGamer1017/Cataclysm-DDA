@@ -1,0 +1,218 @@
+[
+  {
+    "id": "cnt_qi_graph",
+    "type": "widget",
+    "style": "graph",
+    "var": "custom",
+    "custom_var": {
+      "value": { "math": [ "u_vitamin('cult_qi')" ] },
+      "range": [
+        { "math": [ "0" ] },
+        {
+          "math": [
+            "u_has_trait('cult_realm_soul_formation') ? 10000 : u_has_trait('cult_realm_nascent_soul') ? 6000 : u_has_trait('cult_realm_golden_core') ? 3000 : u_has_trait('cult_realm_foundation') ? 1000 : u_has_trait('cult_realm_qi_condensation') ? 300 : 50"
+          ]
+        }
+      ]
+    },
+    "width": 10,
+    "symbols": ".\\|",
+    "fill": "bucket",
+    "colors": [ "c_red", "c_yellow", "c_light_blue" ]
+  },
+  {
+    "id": "cnt_qi_num",
+    "type": "widget",
+    "style": "number",
+    "var": "custom",
+    "custom_var": {
+      "value": { "math": [ "u_vitamin('cult_qi')" ] },
+      "range": [
+        { "math": [ "0" ] },
+        {
+          "math": [
+            "u_has_trait('cult_realm_soul_formation') ? 10000 : u_has_trait('cult_realm_nascent_soul') ? 6000 : u_has_trait('cult_realm_golden_core') ? 3000 : u_has_trait('cult_realm_foundation') ? 1000 : u_has_trait('cult_realm_qi_condensation') ? 300 : 50"
+          ]
+        }
+      ]
+    },
+    "text_align": "right",
+    "padding": 3,
+    "colors": [ "c_red", "c_yellow", "c_light_blue" ]
+  },
+  {
+    "id": "cnt_maxqi_num",
+    "type": "widget",
+    "style": "number",
+    "var": "custom",
+    "custom_var": {
+      "value": {
+        "math": [
+          "u_has_trait('cult_realm_soul_formation') ? 10000 : u_has_trait('cult_realm_nascent_soul') ? 6000 : u_has_trait('cult_realm_golden_core') ? 3000 : u_has_trait('cult_realm_foundation') ? 1000 : u_has_trait('cult_realm_qi_condensation') ? 300 : 50"
+        ]
+      },
+      "range": [ { "math": [ "0" ] }, { "math": [ "10000" ] } ]
+    },
+    "text_align": "left",
+    "padding": 1,
+    "colors": [ "c_light_blue" ],
+    "flags": [ "W_LABEL_NONE" ]
+  },
+  {
+    "id": "cnt_qi_slash",
+    "type": "widget",
+    "style": "text",
+    "string": { "str": " / ", "//~": "NO_I18N" },
+    "padding": 0,
+    "colors": [ "c_white" ]
+  },
+  {
+    "id": "cnt_realm",
+    "type": "widget",
+    "style": "text",
+    "label": "Realm",
+    "clauses": [
+      {
+        "id": "soul",
+        "text": "Soul Formation",
+        "color": "c_light_blue",
+        "condition": { "u_has_trait": "cult_realm_soul_formation" }
+      },
+      {
+        "id": "nascent",
+        "text": "Nascent Soul",
+        "color": "c_light_blue",
+        "condition": { "u_has_trait": "cult_realm_nascent_soul" }
+      },
+      {
+        "id": "golden",
+        "text": "Golden Core",
+        "color": "c_yellow",
+        "condition": { "u_has_trait": "cult_realm_golden_core" }
+      },
+      {
+        "id": "foundation",
+        "text": "Foundation",
+        "color": "c_light_green",
+        "condition": { "u_has_trait": "cult_realm_foundation" }
+      },
+      {
+        "id": "qicond",
+        "text": "Qi Condensation",
+        "color": "c_green",
+        "condition": { "u_has_trait": "cult_realm_qi_condensation" }
+      },
+      {
+        "id": "mortal",
+        "text": "Mortal",
+        "color": "c_dark_gray",
+        "condition": {
+          "not": {
+            "or": [
+              { "u_has_trait": "cult_realm_qi_condensation" },
+              { "u_has_trait": "cult_realm_foundation" },
+              { "u_has_trait": "cult_realm_golden_core" },
+              { "u_has_trait": "cult_realm_nascent_soul" },
+              { "u_has_trait": "cult_realm_soul_formation" }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnt_xp_graph",
+    "type": "widget",
+    "style": "graph",
+    "var": "custom",
+    "custom_var": {
+      "value": { "math": [ "u_vitamin('cult_xp_generic')" ] },
+      "range": [
+        { "math": [ "0" ] },
+        {
+          "math": [
+            "u_has_trait('cult_realm_soul_formation') ? 15000 : u_has_trait('cult_realm_nascent_soul') ? 15000 : u_has_trait('cult_realm_golden_core') ? 6000 : u_has_trait('cult_realm_foundation') ? 2000 : 500"
+          ]
+        }
+      ]
+    },
+    "width": 10,
+    "symbols": ".oO",
+    "fill": "bucket",
+    "colors": [ "c_red", "c_yellow", "c_light_green" ]
+  },
+  {
+    "id": "cnt_xp_num",
+    "type": "widget",
+    "style": "number",
+    "var": "custom",
+    "custom_var": { "value": { "math": [ "u_vitamin('cult_xp_generic')" ] }, "range": [ { "math": [ "0" ] }, { "math": [ "15000" ] } ] },
+    "text_align": "right",
+    "padding": 3,
+    "colors": [ "c_red", "c_yellow", "c_light_green" ]
+  },
+  {
+    "id": "cnt_xp_next_num",
+    "type": "widget",
+    "style": "number",
+    "var": "custom",
+    "custom_var": {
+      "value": {
+        "math": [
+          "u_has_trait('cult_realm_soul_formation') ? 15000 : u_has_trait('cult_realm_nascent_soul') ? 15000 : u_has_trait('cult_realm_golden_core') ? 6000 : u_has_trait('cult_realm_foundation') ? 2000 : 500"
+        ]
+      },
+      "range": [ { "math": [ "0" ] }, { "math": [ "15000" ] } ]
+    },
+    "text_align": "left",
+    "padding": 1,
+    "colors": [ "c_light_blue" ],
+    "flags": [ "W_LABEL_NONE" ]
+  },
+  {
+    "id": "cnt_xp_slash",
+    "type": "widget",
+    "style": "text",
+    "string": { "str": " / ", "//~": "NO_I18N" },
+    "padding": 0,
+    "colors": [ "c_white" ]
+  },
+  {
+    "id": "cnt_qi_label",
+    "type": "widget",
+    "style": "text",
+    "string": { "str": "Qi ", "//~": "NO_I18N" },
+    "padding": 0,
+    "colors": [ "c_light_blue" ]
+  },
+  {
+    "id": "cnt_xp_label",
+    "type": "widget",
+    "style": "text",
+    "string": { "str": "Next ", "//~": "NO_I18N" },
+    "padding": 0,
+    "colors": [ "c_light_green" ]
+  },
+  {
+    "id": "cnt_qi_row",
+    "type": "widget",
+    "style": "layout",
+    "arrange": "minimum_columns",
+    "widgets": [ "cnt_qi_label", "cnt_qi_graph", "cnt_qi_num", "cnt_qi_slash", "cnt_maxqi_num" ]
+  },
+  {
+    "id": "cnt_xp_row",
+    "type": "widget",
+    "style": "layout",
+    "arrange": "minimum_columns",
+    "widgets": [ "cnt_xp_label", "cnt_xp_graph", "cnt_xp_num", "cnt_xp_slash", "cnt_xp_next_num" ]
+  },
+  {
+    "id": "cultivation_sidebar_block",
+    "type": "widget",
+    "style": "layout",
+    "label": "Cultivation",
+    "arrange": "rows",
+    "widgets": [ "cnt_qi_row", "cnt_realm", "cnt_xp_row" ]
+  }
+]

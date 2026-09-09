@@ -1,0 +1,120 @@
+[
+  {
+    "type": "recipe",
+    "result": "cult_sword_dubhe",
+    "category": "CC_WEAPON",
+    "subcategory": "CSC_WEAPON_CUTTING",
+    "skill_used": "fabrication",
+    "difficulty": 5,
+    "time": "4 h",
+    "activity_level": "BRISK_EXERCISE",
+    "//": "GCWL law kit. Learned via the Grand Chariot Manual; the next star's forge-song is taught by each bond (design §27.3). PLACEHOLDER steel costs — real costs arrive with the alchemy lane.",
+    "proficiencies": [ { "proficiency": "prof_metalworking" }, { "proficiency": "prof_blacksmithing" } ],
+    "using": [ [ "blacksmithing_standard", 6 ], [ "mc_steel_standard", 2 ] ],
+    "components": [ [ [ "cult_herb_grass", 1 ] ] ]
+  },
+  {
+    "type": "recipe",
+    "result": "cult_sword_merak",
+    "category": "CC_WEAPON",
+    "subcategory": "CSC_WEAPON_CUTTING",
+    "skill_used": "fabrication",
+    "difficulty": 5,
+    "time": "4 h 30 m",
+    "activity_level": "BRISK_EXERCISE",
+    "//": "GCWL law kit. PLACEHOLDER steel costs — real costs arrive with the alchemy lane.",
+    "proficiencies": [ { "proficiency": "prof_metalworking" }, { "proficiency": "prof_blacksmithing" } ],
+    "using": [ [ "blacksmithing_standard", 8 ], [ "mc_steel_standard", 2 ] ],
+    "components": [ [ [ "cult_herb_grass", 1 ] ] ]
+  },
+  {
+    "type": "recipe",
+    "result": "cult_sword_phegda",
+    "category": "CC_WEAPON",
+    "subcategory": "CSC_WEAPON_CUTTING",
+    "skill_used": "fabrication",
+    "difficulty": 6,
+    "time": "5 h",
+    "activity_level": "BRISK_EXERCISE",
+    "//": "GCWL law kit. PLACEHOLDER steel costs — real costs arrive with the alchemy lane.",
+    "proficiencies": [
+      { "proficiency": "prof_metalworking" },
+      { "proficiency": "prof_blacksmithing" },
+      { "proficiency": "prof_bladesmith" }
+    ],
+    "using": [ [ "blacksmithing_standard", 10 ], [ "mc_steel_standard", 3 ] ],
+    "components": [ [ [ "cult_herb_grass", 2 ] ] ]
+  },
+  {
+    "type": "recipe",
+    "result": "cult_sword_megrez",
+    "category": "CC_WEAPON",
+    "subcategory": "CSC_WEAPON_CUTTING",
+    "skill_used": "fabrication",
+    "difficulty": 6,
+    "time": "6 h",
+    "activity_level": "BRISK_EXERCISE",
+    "//": "GCWL law kit. PLACEHOLDER steel costs — real costs arrive with the alchemy lane.",
+    "proficiencies": [
+      { "proficiency": "prof_metalworking" },
+      { "proficiency": "prof_blacksmithing" },
+      { "proficiency": "prof_bladesmith" }
+    ],
+    "using": [ [ "blacksmithing_standard", 12 ], [ "mc_steel_standard", 3 ] ],
+    "components": [ [ [ "cult_herb_grass", 2 ] ] ]
+  },
+  {
+    "type": "recipe",
+    "result": "cult_sword_alioth",
+    "category": "CC_WEAPON",
+    "subcategory": "CSC_WEAPON_CUTTING",
+    "skill_used": "fabrication",
+    "difficulty": 7,
+    "time": "8 h",
+    "activity_level": "BRISK_EXERCISE",
+    "//": "GCWL law kit. PLACEHOLDER steel costs — real costs arrive with the alchemy lane.",
+    "proficiencies": [
+      { "proficiency": "prof_metalworking" },
+      { "proficiency": "prof_blacksmithing" },
+      { "proficiency": "prof_bladesmith" }
+    ],
+    "using": [ [ "blacksmithing_standard", 14 ], [ "mc_steel_standard", 4 ] ],
+    "components": [ [ [ "cult_herb_grass", 3 ] ] ]
+  },
+  {
+    "type": "recipe",
+    "result": "cult_sword_mizar",
+    "category": "CC_WEAPON",
+    "subcategory": "CSC_WEAPON_CUTTING",
+    "skill_used": "fabrication",
+    "difficulty": 8,
+    "time": "10 h",
+    "activity_level": "BRISK_EXERCISE",
+    "//": "GCWL law kit. PLACEHOLDER steel costs — real costs arrive with the alchemy lane.",
+    "proficiencies": [
+      { "proficiency": "prof_metalworking" },
+      { "proficiency": "prof_blacksmithing" },
+      { "proficiency": "prof_bladesmith" }
+    ],
+    "using": [ [ "blacksmithing_standard", 16 ], [ "mc_steel_standard", 5 ] ],
+    "components": [ [ [ "cult_herb_grass", 3 ] ] ]
+  },
+  {
+    "type": "recipe",
+    "result": "cult_sword_alkaid",
+    "category": "CC_WEAPON",
+    "subcategory": "CSC_WEAPON_CUTTING",
+    "skill_used": "fabrication",
+    "difficulty": 9,
+    "time": "14 h",
+    "activity_level": "BRISK_EXERCISE",
+    "//": "GCWL law kit. Learned only from the Mizar bond. PLACEHOLDER steel costs — real costs arrive with the alchemy lane.",
+    "proficiencies": [
+      { "proficiency": "prof_metalworking" },
+      { "proficiency": "prof_blacksmithing" },
+      { "proficiency": "prof_bladesmith" }
+    ],
+    "using": [ [ "blacksmithing_standard", 20 ], [ "mc_steel_standard", 6 ] ],
+    "components": [ [ [ "cult_herb_grass", 4 ] ] ]
+  }
+]

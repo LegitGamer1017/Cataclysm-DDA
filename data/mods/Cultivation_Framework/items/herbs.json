@@ -1,0 +1,16 @@
+[
+  {
+    "id": "cult_herb_grass",
+    "type": "ITEM",
+    "category": "spare_parts",
+    "name": { "str": "spirit grass blade" },
+    "description": "Faintly glowing blue blades of grass.  The baseline Qi herb; chewed raw it does little, but an alchemist would pay attention.  (Full herb gathering arrives with the alchemy lane.)",
+    "weight": "20 g",
+    "volume": "100 ml",
+    "price": "100 USD",
+    "price_postapoc": "10 USD",
+    "material": [ "veggy" ],
+    "symbol": ",",
+    "color": "light_cyan"
+  }
+]

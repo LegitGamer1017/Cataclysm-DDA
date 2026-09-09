@@ -1,0 +1,38 @@
+[
+  {
+    "type": "recipe",
+    "result": "cult_pill_foundation",
+    "category": "CC_CHEM",
+    "subcategory": "CSC_CHEM_OTHER",
+    "skill_used": "chemistry",
+    "difficulty": 3,
+    "time": "60 m",
+    "//": "PLACEHOLDER components (vanilla only). Real herb costs arrive with the alchemy lane; the gate item id is final.",
+    "components": [ [ [ "charcoal", 4 ] ], [ [ "water_clean", 2 ] ] ],
+    "activity_level": "LIGHT_EXERCISE"
+  },
+  {
+    "type": "recipe",
+    "result": "cult_pill_core",
+    "category": "CC_CHEM",
+    "subcategory": "CSC_CHEM_OTHER",
+    "skill_used": "chemistry",
+    "difficulty": 5,
+    "time": "120 m",
+    "//": "PLACEHOLDER components (vanilla only). Real herb costs arrive with the alchemy lane; the gate item id is final.",
+    "components": [ [ [ "charcoal", 6 ] ], [ [ "meat_cooked", 2 ] ], [ [ "water_clean", 2 ] ] ],
+    "activity_level": "LIGHT_EXERCISE"
+  },
+  {
+    "type": "recipe",
+    "result": "cult_pill_nascent",
+    "category": "CC_CHEM",
+    "subcategory": "CSC_CHEM_OTHER",
+    "skill_used": "chemistry",
+    "difficulty": 7,
+    "time": "240 m",
+    "//": "PLACEHOLDER components (vanilla only). Real herb costs arrive with the alchemy lane; the gate item id is final.",
+    "components": [ [ [ "charcoal", 8 ] ], [ [ "meat_cooked", 4 ] ], [ [ "water_clean", 4 ] ] ],
+    "activity_level": "LIGHT_EXERCISE"
+  }
+]

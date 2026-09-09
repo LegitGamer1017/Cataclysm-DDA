@@ -1,0 +1,65 @@
+[
+  {
+    "id": "cult_qi",
+    "type": "vitamin",
+    "vit_type": "counter",
+    "name": { "str": "Qi" },
+    "min": 0,
+    "max": 10000,
+    "rate": "0 m"
+  },
+  {
+    "id": "cult_impure_qi",
+    "type": "vitamin",
+    "vit_type": "counter",
+    "name": { "str": "Impure Qi" },
+    "min": 0,
+    "max": 1000,
+    "rate": "0 m"
+  },
+  {
+    "id": "cult_mental_fatigue",
+    "type": "vitamin",
+    "vit_type": "counter",
+    "name": { "str": "Mental Fatigue" },
+    "min": 0,
+    "max": 100,
+    "rate": "0 m"
+  },
+  {
+    "id": "cult_xp_ttp",
+    "type": "vitamin",
+    "vit_type": "counter",
+    "name": { "str": "TTP Experience" },
+    "min": 0,
+    "max": 100000,
+    "rate": "0 m"
+  },
+  {
+    "id": "cult_xp_ri",
+    "type": "vitamin",
+    "vit_type": "counter",
+    "name": { "str": "RI Experience" },
+    "min": 0,
+    "max": 100000,
+    "rate": "0 m"
+  },
+  {
+    "id": "cult_xp_rtc",
+    "type": "vitamin",
+    "vit_type": "counter",
+    "name": { "str": "RTC Experience" },
+    "min": 0,
+    "max": 100000,
+    "rate": "0 m"
+  },
+  {
+    "id": "cult_xp_generic",
+    "type": "vitamin",
+    "vit_type": "counter",
+    "name": { "str": "Cultivation Experience" },
+    "min": 0,
+    "max": 100000,
+    "rate": "0 m"
+  }
+]

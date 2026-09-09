@@ -1,0 +1,122 @@
+[
+  {
+    "id": "EOC_CULT_DEBUG_GRANT_QI",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "QA only: gated behind the debug-only trait (design §23.2). Never reachable in normal play.",
+    "condition": { "u_has_trait": "cult_debug_mode" },
+    "effect": [ { "math": [ "u_vitamin('cult_qi') += 1000" ] }, { "u_add_var": "cult_debug_qi", "value": "yes" } ]
+  },
+  {
+    "id": "EOC_CULT_DEBUG_GRANT_XP",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "condition": { "u_has_trait": "cult_debug_mode" },
+    "effect": [ { "math": [ "u_vitamin('cult_xp_generic') += 5000" ] }, { "u_add_var": "cult_debug_xp", "value": "yes" } ]
+  },
+  {
+    "id": "EOC_CULT_DEBUG_SET_IMPURE",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "condition": { "u_has_trait": "cult_debug_mode" },
+    "effect": [ { "math": [ "u_vitamin('cult_impure_qi') += 500" ] }, { "u_add_var": "cult_debug_impure", "value": "yes" } ]
+  },
+  {
+    "id": "EOC_CULT_DEBUG_SET_QI_COND",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "condition": { "u_has_trait": "cult_debug_mode" },
+    "effect": [ { "u_add_trait": "cult_realm_qi_condensation" }, { "u_add_var": "cult_debug_realm", "value": "yes" } ]
+  },
+  {
+    "id": "EOC_CULT_DEBUG_SET_FOUNDATION",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "condition": { "u_has_trait": "cult_debug_mode" },
+    "effect": [
+      { "u_add_trait": "cult_realm_qi_condensation" },
+      { "u_add_trait": "cult_realm_foundation" },
+      { "u_add_var": "cult_debug_realm", "value": "yes" }
+    ]
+  },
+  {
+    "id": "EOC_CULT_DEBUG_SET_GOLDEN",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "condition": { "u_has_trait": "cult_debug_mode" },
+    "effect": [
+      { "u_add_trait": "cult_realm_qi_condensation" },
+      { "u_add_trait": "cult_realm_foundation" },
+      { "u_add_trait": "cult_realm_golden_core" },
+      { "u_add_var": "cult_debug_realm", "value": "yes" }
+    ]
+  },
+  {
+    "id": "EOC_CULT_DEBUG_SET_NASCENT",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "condition": { "u_has_trait": "cult_debug_mode" },
+    "effect": [
+      { "u_add_trait": "cult_realm_qi_condensation" },
+      { "u_add_trait": "cult_realm_foundation" },
+      { "u_add_trait": "cult_realm_golden_core" },
+      { "u_add_trait": "cult_realm_nascent_soul" },
+      { "u_add_var": "cult_debug_realm", "value": "yes" }
+    ]
+  },
+  {
+    "id": "EOC_CULT_DEBUG_MENU",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Playtest door: linked from the menu root, hidden by hide_failing unless the debug trait is held.",
+    "condition": { "u_has_trait": "cult_debug_mode" },
+    "effect": [
+      {
+        "run_eoc_selector": [
+          "EOC_CULT_DEBUG_GRANT_QI",
+          "EOC_CULT_DEBUG_GRANT_XP",
+          "EOC_CULT_DEBUG_SET_IMPURE",
+          "EOC_CULT_DEBUG_SET_QI_COND",
+          "EOC_CULT_DEBUG_SET_FOUNDATION",
+          "EOC_CULT_DEBUG_SET_GOLDEN",
+          "EOC_CULT_DEBUG_SET_NASCENT",
+          "EOC_CULT_DEBUG_SPAWN_HOUND",
+          "EOC_CULT_MENU_NOTHING"
+        ],
+        "title": "Cultivation DEBUG",
+        "names": [
+          "Grant 1000 Qi",
+          "Grant 5000 XP",
+          "Add 500 impurity",
+          "Set Qi Condensation",
+          "Set Foundation",
+          "Set Golden Core",
+          "Set Nascent Soul",
+          "Spawn hound",
+          "Step back"
+        ],
+        "keys": [ "1", "2", "3", "4", "5", "6", "7", "8", "9" ],
+        "allow_cancel": true,
+        "hide_failing": true
+      }
+    ]
+  },
+  {
+    "id": "EOC_CULT_DEBUG_SPAWN_HOUND",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Invader spawns do not exist yet (L-track deferred); the tribulation hound stands in for spawn-path tests.",
+    "condition": { "u_has_trait": "cult_debug_mode" },
+    "effect": [
+      {
+        "u_spawn_monster": "mon_cult_hound",
+        "real_count": 1,
+        "min_radius": 3,
+        "max_radius": 8,
+        "lifespan": 600,
+        "spawn_message": "Debug: a hound steps out of the statistics."
+      },
+      { "u_add_var": "cult_debug_spawn", "value": "yes" }
+    ]
+  }
+]

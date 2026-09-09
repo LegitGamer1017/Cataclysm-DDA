@@ -1,0 +1,38 @@
+[
+  {
+    "type": "effect_type",
+    "id": "effect_cult_gcw_northsword",
+    "apply_message": "The Northsword of the Chariot descends into your shadow.  Every blade within your reach is its blade.",
+    "remove_message": "The Northsword's presence fades from your shadow.",
+    "rating": "good",
+    "enchantments": [ { "values": [ { "value": "MELEE_DAMAGE", "multiply": 0.5 }, { "value": "ATTACK_SPEED", "add": -25 } ] } ]
+  },
+  {
+    "type": "effect_type",
+    "id": "effect_cult_gcw_flying_dubhe"
+  },
+  {
+    "type": "effect_type",
+    "id": "effect_cult_gcw_flying_merak"
+  },
+  {
+    "type": "effect_type",
+    "id": "effect_cult_gcw_flying_phegda"
+  },
+  {
+    "type": "effect_type",
+    "id": "effect_cult_gcw_flying_megrez"
+  },
+  {
+    "type": "effect_type",
+    "id": "effect_cult_gcw_flying_alioth"
+  },
+  {
+    "type": "effect_type",
+    "id": "effect_cult_gcw_flying_mizar"
+  },
+  {
+    "type": "effect_type",
+    "id": "effect_cult_gcw_flying_alkaid"
+  }
+]

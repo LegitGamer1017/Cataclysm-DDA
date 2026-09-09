@@ -1,0 +1,9 @@
+[
+  {
+    "type": "effect_type",
+    "id": "effect_cult_trance",
+    "apply_message": "You turn your gaze inward.",
+    "remove_message": "Your focus breaks.",
+    "rating": "good"
+  }
+]

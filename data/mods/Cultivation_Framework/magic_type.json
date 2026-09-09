@@ -1,0 +1,9 @@
+[
+  {
+    "id": "cult_cultivation",
+    "type": "magic_type",
+    "energy_source": { "type": "VITAMIN", "vitamin": "cult_qi" },
+    "failure_cost_percent": 0.75,
+    "max_book_level": 0
+  }
+]

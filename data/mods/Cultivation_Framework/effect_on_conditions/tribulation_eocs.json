@@ -1,0 +1,92 @@
+[
+  {
+    "id": "EOC_CULT_TRIB_ZAP",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "One bolt on the caster's tile. Fake-cast ignores cost (design §18.2); tribulation never bills the player.",
+    "effect": [ { "u_cast_spell": { "id": "spell_cult_heavenly_strike" } }, { "u_add_var": "cult_trib_zap_fired", "value": "yes" } ]
+  },
+  {
+    "id": "EOC_CULT_TRIB_MINOR",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Golden Core tribulation: theater + 3 bolts over 5 minutes (design §17.1). Hook stays on the breakthrough gate.",
+    "effect": [
+      { "u_message": "Dark clouds gather, though no storm was forecast.", "type": "bad" },
+      { "math": [ "cause_early_portal_storm = 1" ] },
+      { "run_eocs": [ "EOC_CULT_TRIB_ZAP" ], "time_in_future": "60 seconds" },
+      { "run_eocs": [ "EOC_CULT_TRIB_ZAP" ], "time_in_future": "180 seconds" },
+      { "run_eocs": [ "EOC_CULT_TRIB_ZAP" ], "time_in_future": "300 seconds" },
+      { "u_add_var": "cult_trib_minor_fired", "value": "yes" }
+    ]
+  },
+  {
+    "id": "EOC_CULT_TRIB_MAJOR",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Nascent Soul tribulation: full storm + 5 bolts + 4 spawns, 1-hour lifespan (design §17.1/17.2).",
+    "effect": [
+      { "u_message": "The sky splits.  The storm answers something in you.", "type": "bad" },
+      { "math": [ "cause_portal_storm = 1" ] },
+      { "run_eocs": [ "EOC_CULT_TRIB_ZAP" ], "time_in_future": "60 seconds" },
+      { "run_eocs": [ "EOC_CULT_TRIB_ZAP" ], "time_in_future": "180 seconds" },
+      { "run_eocs": [ "EOC_CULT_TRIB_ZAP" ], "time_in_future": "300 seconds" },
+      { "run_eocs": [ "EOC_CULT_TRIB_ZAP" ], "time_in_future": "420 seconds" },
+      { "run_eocs": [ "EOC_CULT_TRIB_ZAP" ], "time_in_future": "540 seconds" },
+      {
+        "u_spawn_monster": "GROUP_CULT_TRIBULATION",
+        "group": true,
+        "real_count": 4,
+        "min_radius": 5,
+        "max_radius": 15,
+        "lifespan": 3600,
+        "spawn_message": "The storm tears open and things step through."
+      },
+      { "u_add_var": "cult_trib_major_fired", "value": "yes" }
+    ]
+  },
+  {
+    "id": "EOC_CULT_DEVIATION",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Impurity bands (design §17.3), run from the tick. 300s: silent tax (vitamin-observable). 600s: 1-in-20 self-zap. 900s: 1-in-10 crisis (hallucinations + forced trait). Disarm cut: no player-disarm EOC effect exists (technique-disarm is melee-only).",
+    "effect": [
+      {
+        "if": { "math": [ "u_vitamin('cult_impure_qi') >= 900" ] },
+        "then": [
+          {
+            "if": { "one_in_chance": 10 },
+            "then": [
+              { "u_spawn_monster": "mon_cult_inner_demon", "hallucination_count": 2, "min_radius": 3, "max_radius": 8 },
+              {
+                "if": { "one_in_chance": 2 },
+                "then": [ { "u_add_trait": "SCHIZOPHRENIC" } ],
+                "else": [ { "u_add_trait": "INSOMNIA" } ]
+              },
+              { "u_message": "Your inner demons step out of you, wearing your face.", "type": "bad" },
+              { "u_add_var": "cult_deviation_crisis", "value": "yes" }
+            ]
+          }
+        ],
+        "else": [
+          {
+            "if": { "math": [ "u_vitamin('cult_impure_qi') >= 600" ] },
+            "then": [
+              {
+                "if": { "one_in_chance": 20 },
+                "then": [
+                  { "u_deal_damage": "electric", "amount": 10, "bodypart": "torso" },
+                  { "u_message": "Wayward Qi arcs through your torso.", "type": "bad" },
+                  { "u_add_var": "cult_deviation_zap", "value": "yes" }
+                ]
+              }
+            ],
+            "else": [
+              { "if": { "math": [ "u_vitamin('cult_impure_qi') >= 300" ] }, "then": [ { "math": [ "u_vitamin('cult_qi') -= 1" ] } ] }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]

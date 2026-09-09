@@ -1,0 +1,39 @@
+[
+  {
+    "type": "profession",
+    "id": "cult_secluded",
+    "name": "Secluded Practitioner",
+    "description": "You spent the years before the Cataclysm on breathing exercises your master insisted were real.  The week the sky tore open, they started working.",
+    "points": 2,
+    "skills": [ { "level": 1, "name": "survival" } ],
+    "items": {
+      "both": {
+        "entries": [
+          { "item": "jeans" },
+          { "item": "longshirt" },
+          { "item": "socks" },
+          { "item": "sneakers" },
+          { "item": "cult_jade_slip_menu" },
+          { "item": "cult_manual_faded" },
+          { "item": "cult_herb_grass" },
+          { "item": "cult_herb_grass" },
+          { "item": "mortar_pestle" }
+        ]
+      },
+      "male": { "entries": [ { "item": "boxer_shorts" } ] },
+      "female": { "entries": [ { "item": "bra" }, { "item": "panties" } ] }
+    },
+    "traits": [ "qi_sense" ]
+  },
+  {
+    "type": "scenario",
+    "id": "cult_secluded_start",
+    "name": "Secluded Practitioner",
+    "points": 0,
+    "description": "You wake in a cabin at the forest edge with a humming slip of jade, a faded manual, and lungs full of changed air.  The old world is screaming.  Breathe.",
+    "start_name": "Forest Cabin",
+    "allowed_locs": [ "sloc_cabin" ],
+    "professions": [ "cult_secluded" ],
+    "flags": [ "LONE_START" ]
+  }
+]

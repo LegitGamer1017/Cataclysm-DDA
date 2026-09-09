@@ -1,0 +1,587 @@
+[
+  {
+    "id": "EOC_CULT_GCW_LEARN",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Grand Chariot Manual activation (design §27.3, §27.8). Teaching is gated on qi_sense per on-ramp doctrine; repeated use is a guarded no-op. Hook: cult_gcw_style_learned.",
+    "effect": [
+      {
+        "if": { "and": [ { "u_has_trait": "qi_sense" }, { "not": { "u_has_martial_art": "style_cult_grand_chariot" } } ] },
+        "then": [
+          { "u_learn_martial_art": "style_cult_grand_chariot" },
+          { "u_learn_recipe": "cult_sword_dubhe" },
+          { "u_add_var": "cult_gcw_style_learned", "value": "yes" },
+          {
+            "u_message": "The star charts of the Grand Chariot unfold behind your eyes.  Your hands remember seven cuts that were never taught to you, and the forge-songs of the first star follow them.",
+            "type": "good"
+          }
+        ],
+        "else": [
+          {
+            "if": { "u_has_martial_art": "style_cult_grand_chariot" },
+            "then": [
+              { "u_message": "The forms of the Grand Chariot are already yours.  Rereading the charts adds nothing.", "type": "info" }
+            ],
+            "else": [
+              {
+                "u_message": "The diagrams refuse to move for you.  Without awakened qi, the doctrines of the Grand Chariot are so much ink and dead paper.",
+                "type": "bad"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "EOC_CULT_GCW_BOND_DUBHE",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Bond Sword of Dubhe (design §27.3/§27.5). Gated on Qi Condensation + 100 Qi; grants chant, records bond count, teaches the next star's forge-song. Hook: cult_star_bonded + chant trait.",
+    "effect": [
+      {
+        "if": {
+          "and": [
+            { "u_has_trait": "cult_realm_qi_condensation" },
+            { "not": { "u_has_trait": "cult_gcw_dubhe" } },
+            { "math": [ "u_vitamin('cult_qi') >= 100" ] }
+          ]
+        },
+        "then": [
+          { "math": [ "u_vitamin('cult_qi') -= 100" ] },
+          { "u_add_trait": "cult_gcw_dubhe" },
+          { "u_add_var": "cult_star_bonded", "value": "1" },
+          { "u_learn_recipe": "cult_sword_merak" },
+          {
+            "u_message": "Dubhe, the first star, binds itself to your dantian.  The sword remembers its name.",
+            "type": "good"
+          }
+        ],
+        "else": [
+          {
+            "if": { "u_has_trait": "cult_gcw_dubhe" },
+            "then": [ { "u_message": "Dubhe is already bound to you.", "type": "info" } ],
+            "else": [
+              {
+                "u_message": "Dubhe will not bind to you yet.  You need a Qi Condensation realm and at least 100 Qi to spare.",
+                "type": "bad"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "EOC_CULT_GCW_BOND_MERAK",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Bond Sword of Merak (design §27.3). Gated on Foundation Establishment + 100 Qi.",
+    "effect": [
+      {
+        "if": {
+          "and": [
+            { "u_has_trait": "cult_realm_foundation" },
+            { "not": { "u_has_trait": "cult_gcw_merak" } },
+            { "math": [ "u_vitamin('cult_qi') >= 100" ] }
+          ]
+        },
+        "then": [
+          { "math": [ "u_vitamin('cult_qi') -= 100" ] },
+          { "u_add_trait": "cult_gcw_merak" },
+          { "u_add_var": "cult_star_bonded", "value": "2" },
+          { "u_learn_recipe": "cult_sword_phegda" },
+          { "u_message": "Merak wheels into place beside Dubhe.  Two stars now turn within you.", "type": "good" }
+        ],
+        "else": [
+          {
+            "if": { "u_has_trait": "cult_gcw_merak" },
+            "then": [ { "u_message": "Merak is already bound to you.", "type": "info" } ],
+            "else": [
+              {
+                "u_message": "Merak will not bind to you yet.  You need Foundation Establishment and at least 100 Qi to spare.",
+                "type": "bad"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "EOC_CULT_GCW_BOND_PHEGDA",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Bond Sword of Phegda (design §27.3). Gated on Foundation Establishment + 100 Qi.",
+    "effect": [
+      {
+        "if": {
+          "and": [
+            { "u_has_trait": "cult_realm_foundation" },
+            { "not": { "u_has_trait": "cult_gcw_phegda" } },
+            { "math": [ "u_vitamin('cult_qi') >= 100" ] }
+          ]
+        },
+        "then": [
+          { "math": [ "u_vitamin('cult_qi') -= 100" ] },
+          { "u_add_trait": "cult_gcw_phegda" },
+          { "u_add_var": "cult_star_bonded", "value": "3" },
+          { "u_learn_recipe": "cult_sword_megrez" },
+          {
+            "u_message": "Phegda settles behind your ribs like ballast.  Three stars turn within you.",
+            "type": "good"
+          }
+        ],
+        "else": [
+          {
+            "if": { "u_has_trait": "cult_gcw_phegda" },
+            "then": [ { "u_message": "Phegda is already bound to you.", "type": "info" } ],
+            "else": [
+              {
+                "u_message": "Phegda will not bind to you yet.  You need Foundation Establishment and at least 100 Qi to spare.",
+                "type": "bad"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "EOC_CULT_GCW_BOND_MEGREZ",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Bond Sword of Megrez (design §27.3). Gated on Golden Core + 100 Qi.",
+    "effect": [
+      {
+        "if": {
+          "and": [
+            { "u_has_trait": "cult_realm_golden_core" },
+            { "not": { "u_has_trait": "cult_gcw_megrez" } },
+            { "math": [ "u_vitamin('cult_qi') >= 100" ] }
+          ]
+        },
+        "then": [
+          { "math": [ "u_vitamin('cult_qi') -= 100" ] },
+          { "u_add_trait": "cult_gcw_megrez" },
+          { "u_add_var": "cult_star_bonded", "value": "4" },
+          { "u_learn_recipe": "cult_sword_alioth" },
+          {
+            "u_message": "Megrez feeds your dantian while the blade works.  Four stars turn within you.",
+            "type": "good"
+          }
+        ],
+        "else": [
+          {
+            "if": { "u_has_trait": "cult_gcw_megrez" },
+            "then": [ { "u_message": "Megrez is already bound to you.", "type": "info" } ],
+            "else": [
+              { "u_message": "Megrez will not bind to you yet.  You need a Golden Core and at least 100 Qi to spare.", "type": "bad" }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "EOC_CULT_GCW_BOND_ALIOTH",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Bond Sword of Alioth (design §27.3/§27.5). Gated on Nascent Soul + 100 Qi; grants +1 Artifact Mastery overcap.",
+    "effect": [
+      {
+        "if": {
+          "and": [
+            { "u_has_trait": "cult_realm_nascent_soul" },
+            { "not": { "u_has_trait": "cult_gcw_alioth" } },
+            { "math": [ "u_vitamin('cult_qi') >= 100" ] }
+          ]
+        },
+        "then": [
+          { "math": [ "u_vitamin('cult_qi') -= 100" ] },
+          { "u_add_trait": "cult_gcw_alioth" },
+          { "u_add_var": "cult_star_bonded", "value": "5" },
+          { "u_learn_recipe": "cult_sword_mizar" },
+          {
+            "u_message": "Alioth sharpens the eye behind your blade.  Five stars turn within you; your mastery of flying swords grows.",
+            "type": "good"
+          }
+        ],
+        "else": [
+          {
+            "if": { "u_has_trait": "cult_gcw_alioth" },
+            "then": [ { "u_message": "Alioth is already bound to you.", "type": "info" } ],
+            "else": [
+              {
+                "u_message": "Alioth will not bind to you yet.  You need a Nascent Soul and at least 100 Qi to spare.",
+                "type": "bad"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "EOC_CULT_GCW_BOND_MIZAR",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Bond Sword of Mizar (design §27.3/§27.5). Gated on Nascent Soul + 100 Qi; grants +1 Artifact Mastery overcap.",
+    "effect": [
+      {
+        "if": {
+          "and": [
+            { "u_has_trait": "cult_realm_nascent_soul" },
+            { "not": { "u_has_trait": "cult_gcw_mizar" } },
+            { "math": [ "u_vitamin('cult_qi') >= 100" ] }
+          ]
+        },
+        "then": [
+          { "math": [ "u_vitamin('cult_qi') -= 100" ] },
+          { "u_add_trait": "cult_gcw_mizar" },
+          { "u_add_var": "cult_star_bonded", "value": "6" },
+          { "u_learn_recipe": "cult_sword_alkaid" },
+          {
+            "u_message": "Mizar teaches your body to be where the blade is not.  Six stars turn within you; your mastery of flying swords grows.",
+            "type": "good"
+          }
+        ],
+        "else": [
+          {
+            "if": { "u_has_trait": "cult_gcw_mizar" },
+            "then": [ { "u_message": "Mizar is already bound to you.", "type": "info" } ],
+            "else": [
+              { "u_message": "Mizar will not bind to you yet.  You need a Nascent Soul and at least 100 Qi to spare.", "type": "bad" }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "EOC_CULT_GCW_BOND_ALKAID",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Bond Sword of Alkaid (design §27.3/§27.5). Gated on Soul Formation + 100 Qi; grants +1 overcap, the Alkaid Chant (teaches Possessed Northsword via spells_learned) and the Sevenstar Convergence capstone.",
+    "effect": [
+      {
+        "if": {
+          "and": [
+            { "u_has_trait": "cult_realm_soul_formation" },
+            { "not": { "u_has_trait": "cult_gcw_alkaid" } },
+            { "math": [ "u_vitamin('cult_qi') >= 100" ] }
+          ]
+        },
+        "then": [
+          { "math": [ "u_vitamin('cult_qi') -= 100" ] },
+          { "u_add_trait": "cult_gcw_alkaid" },
+          { "u_add_trait": "cult_gcw_sevenstar" },
+          { "u_add_var": "cult_star_bonded", "value": "7" },
+          {
+            "u_message": "Alkaid burns at the handle of the Chariot.  All seven stars turn within you, and the Northsword answers to your shadow.  The Chariot shows death; now it shows it at your pointing.",
+            "type": "good"
+          }
+        ],
+        "else": [
+          {
+            "if": { "u_has_trait": "cult_gcw_alkaid" },
+            "then": [ { "u_message": "Alkaid is already bound to you.", "type": "info" } ],
+            "else": [
+              {
+                "u_message": "Alkaid will not bind to you yet.  You need Soul Formation and at least 100 Qi to spare.",
+                "type": "bad"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "EOC_CULT_GCW_SWORD_DUBHE",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Sword of Dubhe activation (design §27.5). Unbonded → runs the bond EOC; bonded → release: 25 Qi, friendly flying pet for 30 minutes. Marker effect gates re-release. Hook: cult_gcw_released_dubhe.",
+    "effect": [
+      {
+        "if": { "not": { "u_has_trait": "cult_gcw_dubhe" } },
+        "then": [ { "run_eocs": [ "EOC_CULT_GCW_BOND_DUBHE" ] } ],
+        "else": [
+          {
+            "if": { "u_has_effect": "effect_cult_gcw_flying_dubhe" },
+            "then": [ { "u_message": "The Sword of Dubhe already flies beside you.", "type": "info" } ],
+            "else": [
+              {
+                "if": { "math": [ "u_vitamin('cult_qi') >= 25" ] },
+                "then": [
+                  { "math": [ "u_vitamin('cult_qi') -= 25" ] },
+                  { "u_add_effect": "effect_cult_gcw_flying_dubhe", "duration": "30 minutes" },
+                  {
+                    "u_spawn_monster": "mon_cult_gcw_dubhe",
+                    "friendly": true,
+                    "real_count": 1,
+                    "min_radius": 1,
+                    "max_radius": 2,
+                    "lifespan": 1800
+                  },
+                  { "u_add_var": "cult_gcw_released_dubhe", "value": "yes" },
+                  {
+                    "u_message": "The Sword of Dubhe rises from your hand and takes its place in the air beside you.",
+                    "type": "good"
+                  }
+                ],
+                "else": [ { "u_message": "You lack the Qi to release the Sword of Dubhe.", "type": "bad" } ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "EOC_CULT_GCW_SWORD_MERAK",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Sword of Merak activation (design §27.5). Hook: cult_gcw_released_merak.",
+    "effect": [
+      {
+        "if": { "not": { "u_has_trait": "cult_gcw_merak" } },
+        "then": [ { "run_eocs": [ "EOC_CULT_GCW_BOND_MERAK" ] } ],
+        "else": [
+          {
+            "if": { "u_has_effect": "effect_cult_gcw_flying_merak" },
+            "then": [ { "u_message": "The Sword of Merak already flies beside you.", "type": "info" } ],
+            "else": [
+              {
+                "if": { "math": [ "u_vitamin('cult_qi') >= 25" ] },
+                "then": [
+                  { "math": [ "u_vitamin('cult_qi') -= 25" ] },
+                  { "u_add_effect": "effect_cult_gcw_flying_merak", "duration": "30 minutes" },
+                  {
+                    "u_spawn_monster": "mon_cult_gcw_merak",
+                    "friendly": true,
+                    "real_count": 1,
+                    "min_radius": 1,
+                    "max_radius": 2,
+                    "lifespan": 1800
+                  },
+                  { "u_add_var": "cult_gcw_released_merak", "value": "yes" },
+                  {
+                    "u_message": "The Sword of Merak rises from your hand and takes its place in the air beside you.",
+                    "type": "good"
+                  }
+                ],
+                "else": [ { "u_message": "You lack the Qi to release the Sword of Merak.", "type": "bad" } ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "EOC_CULT_GCW_SWORD_PHEGDA",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Sword of Phegda activation (design §27.5). Hook: cult_gcw_released_phegda.",
+    "effect": [
+      {
+        "if": { "not": { "u_has_trait": "cult_gcw_phegda" } },
+        "then": [ { "run_eocs": [ "EOC_CULT_GCW_BOND_PHEGDA" ] } ],
+        "else": [
+          {
+            "if": { "u_has_effect": "effect_cult_gcw_flying_phegda" },
+            "then": [ { "u_message": "The Sword of Phegda already flies beside you.", "type": "info" } ],
+            "else": [
+              {
+                "if": { "math": [ "u_vitamin('cult_qi') >= 25" ] },
+                "then": [
+                  { "math": [ "u_vitamin('cult_qi') -= 25" ] },
+                  { "u_add_effect": "effect_cult_gcw_flying_phegda", "duration": "30 minutes" },
+                  {
+                    "u_spawn_monster": "mon_cult_gcw_phegda",
+                    "friendly": true,
+                    "real_count": 1,
+                    "min_radius": 1,
+                    "max_radius": 2,
+                    "lifespan": 1800
+                  },
+                  { "u_add_var": "cult_gcw_released_phegda", "value": "yes" },
+                  {
+                    "u_message": "The Sword of Phegda rises from your hand and takes its place in the air beside you.",
+                    "type": "good"
+                  }
+                ],
+                "else": [ { "u_message": "You lack the Qi to release the Sword of Phegda.", "type": "bad" } ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "EOC_CULT_GCW_SWORD_MEGREZ",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Sword of Megrez activation (design §27.5). Hook: cult_gcw_released_megrez.",
+    "effect": [
+      {
+        "if": { "not": { "u_has_trait": "cult_gcw_megrez" } },
+        "then": [ { "run_eocs": [ "EOC_CULT_GCW_BOND_MEGREZ" ] } ],
+        "else": [
+          {
+            "if": { "u_has_effect": "effect_cult_gcw_flying_megrez" },
+            "then": [ { "u_message": "The Sword of Megrez already flies beside you.", "type": "info" } ],
+            "else": [
+              {
+                "if": { "math": [ "u_vitamin('cult_qi') >= 25" ] },
+                "then": [
+                  { "math": [ "u_vitamin('cult_qi') -= 25" ] },
+                  { "u_add_effect": "effect_cult_gcw_flying_megrez", "duration": "30 minutes" },
+                  {
+                    "u_spawn_monster": "mon_cult_gcw_megrez",
+                    "friendly": true,
+                    "real_count": 1,
+                    "min_radius": 1,
+                    "max_radius": 2,
+                    "lifespan": 1800
+                  },
+                  { "u_add_var": "cult_gcw_released_megrez", "value": "yes" },
+                  {
+                    "u_message": "The Sword of Megrez rises from your hand and takes its place in the air beside you.",
+                    "type": "good"
+                  }
+                ],
+                "else": [ { "u_message": "You lack the Qi to release the Sword of Megrez.", "type": "bad" } ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "EOC_CULT_GCW_SWORD_ALIOTH",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Sword of Alioth activation (design §27.5). Hook: cult_gcw_released_alioth.",
+    "effect": [
+      {
+        "if": { "not": { "u_has_trait": "cult_gcw_alioth" } },
+        "then": [ { "run_eocs": [ "EOC_CULT_GCW_BOND_ALIOTH" ] } ],
+        "else": [
+          {
+            "if": { "u_has_effect": "effect_cult_gcw_flying_alioth" },
+            "then": [ { "u_message": "The Sword of Alioth already flies beside you.", "type": "info" } ],
+            "else": [
+              {
+                "if": { "math": [ "u_vitamin('cult_qi') >= 25" ] },
+                "then": [
+                  { "math": [ "u_vitamin('cult_qi') -= 25" ] },
+                  { "u_add_effect": "effect_cult_gcw_flying_alioth", "duration": "30 minutes" },
+                  {
+                    "u_spawn_monster": "mon_cult_gcw_alioth",
+                    "friendly": true,
+                    "real_count": 1,
+                    "min_radius": 1,
+                    "max_radius": 2,
+                    "lifespan": 1800
+                  },
+                  { "u_add_var": "cult_gcw_released_alioth", "value": "yes" },
+                  {
+                    "u_message": "The Sword of Alioth rises from your hand and takes its place in the air beside you.",
+                    "type": "good"
+                  }
+                ],
+                "else": [ { "u_message": "You lack the Qi to release the Sword of Alioth.", "type": "bad" } ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "EOC_CULT_GCW_SWORD_MIZAR",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Sword of Mizar activation (design §27.5). Hook: cult_gcw_released_mizar.",
+    "effect": [
+      {
+        "if": { "not": { "u_has_trait": "cult_gcw_mizar" } },
+        "then": [ { "run_eocs": [ "EOC_CULT_GCW_BOND_MIZAR" ] } ],
+        "else": [
+          {
+            "if": { "u_has_effect": "effect_cult_gcw_flying_mizar" },
+            "then": [ { "u_message": "The Sword of Mizar already flies beside you.", "type": "info" } ],
+            "else": [
+              {
+                "if": { "math": [ "u_vitamin('cult_qi') >= 25" ] },
+                "then": [
+                  { "math": [ "u_vitamin('cult_qi') -= 25" ] },
+                  { "u_add_effect": "effect_cult_gcw_flying_mizar", "duration": "30 minutes" },
+                  {
+                    "u_spawn_monster": "mon_cult_gcw_mizar",
+                    "friendly": true,
+                    "real_count": 1,
+                    "min_radius": 1,
+                    "max_radius": 2,
+                    "lifespan": 1800
+                  },
+                  { "u_add_var": "cult_gcw_released_mizar", "value": "yes" },
+                  {
+                    "u_message": "The Sword of Mizar rises from your hand and takes its place in the air beside you.",
+                    "type": "good"
+                  }
+                ],
+                "else": [ { "u_message": "You lack the Qi to release the Sword of Mizar.", "type": "bad" } ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "EOC_CULT_GCW_SWORD_ALKAID",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Sword of Alkaid activation (design §27.5). Hook: cult_gcw_released_alkaid.",
+    "effect": [
+      {
+        "if": { "not": { "u_has_trait": "cult_gcw_alkaid" } },
+        "then": [ { "run_eocs": [ "EOC_CULT_GCW_BOND_ALKAID" ] } ],
+        "else": [
+          {
+            "if": { "u_has_effect": "effect_cult_gcw_flying_alkaid" },
+            "then": [ { "u_message": "The Sword of Alkaid already flies beside you.", "type": "info" } ],
+            "else": [
+              {
+                "if": { "math": [ "u_vitamin('cult_qi') >= 25" ] },
+                "then": [
+                  { "math": [ "u_vitamin('cult_qi') -= 25" ] },
+                  { "u_add_effect": "effect_cult_gcw_flying_alkaid", "duration": "30 minutes" },
+                  {
+                    "u_spawn_monster": "mon_cult_gcw_alkaid",
+                    "friendly": true,
+                    "real_count": 1,
+                    "min_radius": 1,
+                    "max_radius": 2,
+                    "lifespan": 1800
+                  },
+                  { "u_add_var": "cult_gcw_released_alkaid", "value": "yes" },
+                  {
+                    "u_message": "The Sword of Alkaid rises from your hand and takes its place in the air beside you.",
+                    "type": "good"
+                  }
+                ],
+                "else": [ { "u_message": "You lack the Qi to release the Sword of Alkaid.", "type": "bad" } ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]

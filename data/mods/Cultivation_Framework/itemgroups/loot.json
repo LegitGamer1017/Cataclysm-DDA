@@ -1,0 +1,31 @@
+[
+  {
+    "id": "mansion_books",
+    "type": "item_group",
+    "copy-from": "mansion_books",
+    "extend": {
+      "entries": [ { "item": "cult_manual_faded", "prob": 10 }, { "item": "cult_manual_dipper_chart", "prob": 8, "//": "GCWL law kit" } ]
+    },
+    "subtype": "distribution"
+  },
+  {
+    "id": "book_martial_rare",
+    "type": "item_group",
+    "copy-from": "book_martial_rare",
+    "extend": { "items": [ [ "cult_manual_faded", 10 ], [ "cult_manual_dipper_chart", 8 ] ] }
+  },
+  {
+    "id": "forage_spring",
+    "type": "item_group",
+    "copy-from": "forage_spring",
+    "extend": { "entries": [ { "item": "cult_fruit_spirit", "prob": 8, "count": [ 1, 1 ] } ] },
+    "subtype": "distribution"
+  },
+  {
+    "id": "forage_summer",
+    "type": "item_group",
+    "copy-from": "forage_summer",
+    "extend": { "entries": [ { "item": "cult_fruit_spirit", "prob": 8, "count": [ 1, 1 ] } ] },
+    "subtype": "distribution"
+  }
+]

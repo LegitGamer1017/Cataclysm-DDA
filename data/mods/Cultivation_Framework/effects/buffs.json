@@ -1,0 +1,18 @@
+[
+  {
+    "type": "effect_type",
+    "id": "effect_cult_warded",
+    "apply_message": "Qi hardens over your skin.",
+    "remove_message": "The ward flakes away.",
+    "rating": "good",
+    "enchantments": [ { "values": [ { "value": "ARMOR_ALL", "add": 6 } ] } ]
+  },
+  {
+    "type": "effect_type",
+    "id": "effect_cult_wind_steps",
+    "apply_message": "The wind offers you its biography.  You accept.",
+    "remove_message": "Your feet remember gravity.",
+    "rating": "good",
+    "enchantments": [ { "values": [ { "value": "SPEED", "multiply": 0.3 }, { "value": "DODGE_CHANCE", "add": 3 } ] } ]
+  }
+]

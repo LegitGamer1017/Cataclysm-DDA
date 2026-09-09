@@ -1,0 +1,22 @@
+[
+  {
+    "id": "spell_cult_gcw_northsword",
+    "type": "SPELL",
+    "name": "Possessed Northsword",
+    "description": "You speak the seventh star's true name and the Grand Chariot answers from your shadow.  For fifteen seconds every blade you carry cuts as though the Northsword itself guided it.  This is the price of the law's last form.",
+    "effect": "attack",
+    "effect_str": "effect_cult_gcw_northsword",
+    "shape": "blast",
+    "valid_targets": [ "self" ],
+    "flags": [ "SOMATIC", "NO_HANDS", "LOUD" ],
+    "spell_class": "NONE",
+    "magic_type": "cult_cultivation",
+    "base_energy_cost": 200,
+    "base_casting_time": 100,
+    "difficulty": 0,
+    "min_range": 1,
+    "max_range": 1,
+    "min_duration": 1500,
+    "max_duration": 1500
+  }
+]

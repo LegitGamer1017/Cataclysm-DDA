@@ -1,0 +1,55 @@
+[
+  {
+    "id": "EOC_CULT_READ_FADED_MANUAL",
+    "type": "effect_on_condition",
+    "eoc_type": "EVENT",
+    "required_event": "reads_book",
+    "//": "Manual on-ramp (design §5, §20.1). The book also teaches Brawling through its martial_art field; this EOC is the awakening.",
+    "condition": {
+      "and": [ { "compare_string": [ "cult_manual_faded", { "context_val": "itype" } ] }, { "not": { "u_has_trait": "qi_sense" } } ]
+    },
+    "effect": [
+      { "u_add_trait": "qi_sense" },
+      {
+        "u_message": "The breathing exercises stop hurting and start humming.  You can feel it now: Qi, everywhere, pressing like weather.",
+        "type": "good"
+      },
+      {
+        "u_message": "Focus the jade slip (a) to meditate.  Eat before long sessions.  Do not cultivate in poisoned places.",
+        "type": "info"
+      },
+      { "u_add_var": "cult_onramp_manual", "value": "yes" }
+    ]
+  },
+  {
+    "id": "EOC_CULT_EAT_SPIRIT_FRUIT",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Fruit on-ramp (design §5, §20.1). Power without control burns; power with control still stains.",
+    "effect": [
+      {
+        "if": { "not": { "u_has_trait": "qi_sense" } },
+        "then": [
+          { "math": [ "u_vitamin('cult_qi') += 300" ] },
+          { "math": [ "u_vitamin('cult_impure_qi') += 100" ] },
+          { "u_deal_damage": "heat", "amount": 15, "bodypart": "torso" },
+          {
+            "u_message": "A burst of energy floods you, too big to hold.  You feel about to come apart.",
+            "type": "bad"
+          },
+          {
+            "u_message": "At the last second it settles: a faint but powerful beat, deep as a drum.  Your insides are scorched.  Find a manual or teacher before this kills you.",
+            "type": "bad"
+          },
+          { "u_add_var": "cult_onramp_fruit", "value": "yes" }
+        ],
+        "else": [
+          { "math": [ "u_vitamin('cult_qi') += 300" ] },
+          { "math": [ "u_vitamin('cult_impure_qi') += 30" ] },
+          { "u_message": "The fruit dissolves into clean fire.  Your dantian drinks deep.", "type": "good" },
+          { "u_add_var": "cult_onramp_fruit", "value": "yes" }
+        ]
+      }
+    ]
+  }
+]

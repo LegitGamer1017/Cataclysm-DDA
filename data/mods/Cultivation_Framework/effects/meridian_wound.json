@@ -1,0 +1,9 @@
+[
+  {
+    "type": "effect_type",
+    "id": "effect_cult_meridian_wound",
+    "apply_message": "Your meridians scream.  Something tore on the way through.",
+    "remove_message": "Your meridians knit whole again.",
+    "rating": "bad"
+  }
+]

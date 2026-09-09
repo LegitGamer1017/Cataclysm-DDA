@@ -1,0 +1,288 @@
+[
+  {
+    "id": "EOC_CULT_QI_TICK",
+    "type": "effect_on_condition",
+    "eoc_type": "RECURRING",
+    "recurrence": 60,
+    "global": true,
+    "run_for_npcs": false,
+    "//": "Lane-1 heartbeat (design §15). Clamp -> stale-trance cleanup -> fatigue clear -> meditate branch. Realm soft-cap ladder arrives Lane 2; until then the flat 300 cap stands.",
+    "effect": [
+      {
+        "if": { "and": [ { "u_has_trait": "cult_realm_soul_formation" }, { "math": [ "u_vitamin('cult_qi') > 10000" ] } ] },
+        "then": [ { "math": [ "u_vitamin('cult_qi') = 10000" ] }, { "u_add_var": "cult_meditation_capped", "value": "yes" } ],
+        "else": [
+          {
+            "if": { "and": [ { "u_has_trait": "cult_realm_nascent_soul" }, { "math": [ "u_vitamin('cult_qi') > 6000" ] } ] },
+            "then": [ { "math": [ "u_vitamin('cult_qi') = 6000" ] }, { "u_add_var": "cult_meditation_capped", "value": "yes" } ],
+            "else": [
+              {
+                "if": { "and": [ { "u_has_trait": "cult_realm_golden_core" }, { "math": [ "u_vitamin('cult_qi') > 3000" ] } ] },
+                "then": [ { "math": [ "u_vitamin('cult_qi') = 3000" ] }, { "u_add_var": "cult_meditation_capped", "value": "yes" } ],
+                "else": [
+                  {
+                    "if": { "and": [ { "u_has_trait": "cult_realm_foundation" }, { "math": [ "u_vitamin('cult_qi') > 1000" ] } ] },
+                    "then": [ { "math": [ "u_vitamin('cult_qi') = 1000" ] }, { "u_add_var": "cult_meditation_capped", "value": "yes" } ],
+                    "else": [
+                      {
+                        "if": { "math": [ "u_vitamin('cult_qi') > 300" ] },
+                        "then": [ { "math": [ "u_vitamin('cult_qi') = 300" ] }, { "u_add_var": "cult_meditation_capped", "value": "yes" } ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "if": { "and": [ { "u_has_effect": "effect_cult_meridian_wound" }, { "math": [ "u_vitamin('cult_qi') > 150" ] } ] },
+        "then": [ { "math": [ "u_vitamin('cult_qi') = 150" ] }, { "u_add_var": "cult_meditation_capped", "value": "yes" } ]
+      },
+      {
+        "if": { "and": [ { "u_has_effect": "effect_cult_trance" }, { "not": "u_has_activity" } ] },
+        "then": [ { "u_lose_effect": "effect_cult_trance" } ]
+      },
+      {
+        "if": { "or": [ { "u_has_effect": "sleep" }, { "u_has_effect": "effect_cult_trance" } ] },
+        "then": [ { "math": [ "u_vitamin('cult_mental_fatigue') -= 1" ] } ]
+      },
+      {
+        "if": { "and": [ { "u_has_trait": "qi_sense" }, { "u_has_effect": "effect_cult_trance" } ] },
+        "then": [
+          { "run_eocs": [ "EOC_CULT_MEDITATION_YIELD" ] },
+          { "math": [ "u_vitamin('cult_xp_generic') += 1" ] },
+          {
+            "if": { "u_has_trait": "cult_realm_soul_formation" },
+            "then": [ { "math": [ "u_vitamin('cult_qi') += 27" ] } ],
+            "else": [
+              {
+                "if": { "u_has_trait": "cult_realm_nascent_soul" },
+                "then": [ { "math": [ "u_vitamin('cult_qi') += 17" ] } ],
+                "else": [
+                  {
+                    "if": { "u_has_trait": "cult_realm_golden_core" },
+                    "then": [ { "math": [ "u_vitamin('cult_qi') += 9" ] } ],
+                    "else": [ { "if": { "u_has_trait": "cult_realm_foundation" }, "then": [ { "math": [ "u_vitamin('cult_qi') += 3" ] } ] } ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      { "run_eocs": [ "EOC_CULT_DEVIATION" ] }
+    ]
+  },
+  {
+    "id": "EOC_CULT_MEDITATION_YIELD",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "One minute of trance, converted to Qi. First-match env ladder (design §15.3, integer grants). Hook cult_meditation_yield fires on every grant for the Q/A harness.",
+    "effect": [
+      { "u_location_variable": { "u_val": "cult_here" } },
+      {
+        "if": { "math": [ "u_vitamin('cult_impure_qi') >= 900" ] },
+        "then": [ { "u_add_var": "cult_deviation_pending", "value": "yes" } ],
+        "else": [
+          {
+            "if": { "is_weather": "portal_storm" },
+            "then": [
+              { "math": [ "u_vitamin('cult_qi') += 5" ] },
+              { "math": [ "u_vitamin('cult_impure_qi') += 8" ] },
+              { "u_add_var": "cult_meditation_yield", "value": "yes" }
+            ],
+            "else": [
+              {
+                "if": { "u_near_om_location": "forest_thick", "range": 1 },
+                "then": [ { "math": [ "u_vitamin('cult_qi') += 6" ] }, { "u_add_var": "cult_meditation_yield", "value": "yes" } ],
+                "else": [
+                  {
+                    "if": { "u_near_om_location": "forest", "range": 1 },
+                    "then": [ { "math": [ "u_vitamin('cult_qi') += 4" ] }, { "u_add_var": "cult_meditation_yield", "value": "yes" } ],
+                    "else": [
+                      {
+                        "if": { "is_weather": "lightning" },
+                        "then": [ { "math": [ "u_vitamin('cult_qi') += 4" ] }, { "u_add_var": "cult_meditation_yield", "value": "yes" } ],
+                        "else": [
+                          {
+                            "if": { "math": [ "u_val('pos_z') < 0" ] },
+                            "then": [ { "math": [ "u_vitamin('cult_qi') += 1" ] }, { "u_add_var": "cult_meditation_yield", "value": "yes" } ],
+                            "else": [
+                              {
+                                "if": { "map_in_city": { "context_val": "cult_here" } },
+                                "then": [
+                                  { "math": [ "u_vitamin('cult_qi') += 1" ] },
+                                  { "math": [ "u_vitamin('cult_impure_qi') += 2" ] },
+                                  { "u_add_var": "cult_meditation_yield", "value": "yes" }
+                                ],
+                                "else": [
+                                  {
+                                    "if": { "and": [ "u_is_outside", "is_day" ] },
+                                    "then": [ { "math": [ "u_vitamin('cult_qi') += 4" ] }, { "u_add_var": "cult_meditation_yield", "value": "yes" } ],
+                                    "else": [
+                                      {
+                                        "if": "u_is_outside",
+                                        "then": [ { "math": [ "u_vitamin('cult_qi') += 3" ] }, { "u_add_var": "cult_meditation_yield", "value": "yes" } ],
+                                        "else": [ { "math": [ "u_vitamin('cult_qi') += 3" ] }, { "u_add_var": "cult_meditation_yield", "value": "yes" } ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "if": {
+          "and": [
+            { "or": [ { "u_near_om_location": "forest_thick", "range": 1 }, { "u_near_om_location": "forest", "range": 1 } ] },
+            "is_day",
+            { "not": { "map_in_city": { "context_val": "cult_here" } } }
+          ]
+        },
+        "then": [ { "math": [ "u_vitamin('cult_impure_qi') -= 3" ] } ]
+      }
+    ]
+  },
+  {
+    "id": "EOC_CULT_QI_TRICKLE",
+    "type": "effect_on_condition",
+    "eoc_type": "RECURRING",
+    "recurrence": 300,
+    "global": true,
+    "run_for_npcs": false,
+    "//": "Passive seep for the awakened (design §15.2). No hook: the harness targets meditation, not seep.",
+    "condition": { "and": [ { "u_has_trait": "qi_sense" }, { "math": [ "u_vitamin('cult_qi') < 300" ] } ] },
+    "effect": [ { "math": [ "u_vitamin('cult_qi') += 1" ] } ]
+  },
+  {
+    "id": "EOC_CULT_QI_DECAY",
+    "type": "effect_on_condition",
+    "eoc_type": "RECURRING",
+    "recurrence": 600,
+    "global": true,
+    "run_for_npcs": false,
+    "//": "Small sins fade (design §15.4). Vitamin clamps at min 0 on its own.",
+    "effect": [ { "math": [ "u_vitamin('cult_impure_qi') -= 1" ] } ]
+  },
+  {
+    "id": "EOC_CULT_GRANT_QI",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Callable library (design §15.1). Caller passes variables:{amount:N}. XP library deferred to Lane 2 with the path traits.",
+    "effect": [ { "math": [ "u_vitamin('cult_qi') += amount" ] } ]
+  },
+  {
+    "id": "EOC_CULT_ADD_IMPURE",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Callable library. Caller passes variables:{amount:N}.",
+    "effect": [ { "math": [ "u_vitamin('cult_impure_qi') += amount" ] } ]
+  },
+  {
+    "id": "EOC_CULT_ADD_FATIGUE",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Callable library. Caller passes variables:{amount:N}.",
+    "effect": [ { "math": [ "u_vitamin('cult_mental_fatigue') += amount" ] } ]
+  },
+  {
+    "id": "EOC_CULT_MEDITATE_1H",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Trance state is mirrored by effect_cult_trance because EOC u_has_activity takes no activity argument (verified in src/condition.cpp). Cleanup of stale mirrors lives in the tick.",
+    "effect": [
+      {
+        "if": { "not": { "u_has_trait": "qi_sense" } },
+        "then": [ { "u_message": "You sit and breathe, but feel nothing.  (You lack Qi Sense.)", "type": "bad" } ],
+        "else": [
+          { "u_assign_activity": "ACT_CULT_TRANCE", "duration": "60 minutes" },
+          { "u_add_effect": "effect_cult_trance", "duration": "70 minutes" },
+          { "u_add_var": "cult_meditation_start", "value": "yes" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "EOC_CULT_MEDITATE_4H",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "effect": [
+      {
+        "if": { "not": { "u_has_trait": "qi_sense" } },
+        "then": [ { "u_message": "You sit and breathe, but feel nothing.  (You lack Qi Sense.)", "type": "bad" } ],
+        "else": [
+          { "u_assign_activity": "ACT_CULT_TRANCE", "duration": "240 minutes" },
+          { "u_add_effect": "effect_cult_trance", "duration": "250 minutes" },
+          { "u_add_var": "cult_meditation_start", "value": "yes" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "EOC_CULT_TRANCE_DONE",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "effect": [
+      { "u_lose_effect": "effect_cult_trance" },
+      { "u_message": "You surface from the trance, Qi settling into your dantian.", "type": "good" },
+      { "u_add_var": "cult_meditation_done", "value": "yes" }
+    ]
+  },
+  {
+    "id": "EOC_CULT_STATUS",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "H-track readout (design §20.2). Messages are player-only; the harness asserts the underlying vitamins directly.",
+    "effect": [
+      { "math": [ "qi_now = u_vitamin('cult_qi')" ] },
+      { "math": [ "imp_now = u_vitamin('cult_impure_qi')" ] },
+      { "math": [ "fat_now = u_vitamin('cult_mental_fatigue')" ] },
+      {
+        "u_message": "Qi: <context_val:qi_now>/300.  Impurity: <context_val:imp_now>.  Fatigue: <context_val:fat_now>.",
+        "type": "info"
+      }
+    ]
+  },
+  {
+    "id": "EOC_CULT_MENU_ROOT",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Menu root (design §16.11). Linked from the slip after the proof EOC; DEBUG branch hides without the debug trait.",
+    "effect": [
+      {
+        "run_eoc_selector": [
+          "EOC_CULT_MEDITATE_1H",
+          "EOC_CULT_MEDITATE_4H",
+          "EOC_CULT_BREAKTHROUGH_MENU",
+          "EOC_CULT_STATUS",
+          "EOC_CULT_DEBUG_MENU",
+          "EOC_CULT_MENU_NOTHING"
+        ],
+        "title": "Cultivation",
+        "names": [ "Meditate (1 hour)", "Meditate (4 hours)", "Attempt breakthrough", "Sense yourself", "DEBUG", "Step back" ],
+        "keys": [ "1", "2", "3", "4", "5", "6" ],
+        "allow_cancel": true,
+        "hide_failing": true
+      }
+    ]
+  },
+  {
+    "id": "EOC_CULT_MENU_NOTHING",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Shared cancel leaf (design §16.11).",
+    "effect": [  ]
+  }
+]

@@ -1,0 +1,28 @@
+[
+  {
+    "id": "EOC_CULT_SWORD_QI_TAX",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Auto-proc tax (design §18.2). u_cast_spell fires cost-blind, so the debit is manual and mandatory. MA-style hooks (oncrit_eocs) arrive with the RTC/MMA lane; until then this fires by id for the harness and debug.",
+    "effect": [
+      {
+        "if": { "math": [ "u_vitamin('cult_qi') >= 15" ] },
+        "then": [
+          { "math": [ "u_vitamin('cult_qi') -= 15" ] },
+          { "math": [ "u_vitamin('cult_mental_fatigue') += 8" ] },
+          { "u_cast_spell": { "id": "spell_cult_sword_qi" } },
+          { "u_add_var": "cult_tax_fired", "value": "yes" }
+        ],
+        "else": [ { "u_message": "You lack the Qi to manifest your technique!", "type": "bad" } ]
+      }
+    ]
+  },
+  {
+    "id": "EOC_CULT_CAST_FATIGUE",
+    "type": "effect_on_condition",
+    "eoc_type": "EVENT",
+    "required_event": "spellcasting_finish",
+    "//": "Manual casts tax focus (design §15.5). Fake casts (u_cast_spell) never raise this event, so procs use the tax EOC instead. Also covers foreign spells (M1 synergy). No hook: the vitamin delta is the observable.",
+    "effect": [ { "math": [ "u_vitamin('cult_mental_fatigue') += 5" ] } ]
+  }
+]

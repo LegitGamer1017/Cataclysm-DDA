@@ -1,0 +1,14 @@
+[
+  {
+    "id": "ACT_CULT_TRANCE",
+    "type": "activity_type",
+    "activity_level": "NO_EXERCISE",
+    "verb": "sinking into a cultivation trance",
+    "based_on": "time",
+    "rooted": true,
+    "interruptable": true,
+    "interruptable_with_kb": true,
+    "can_resume": false,
+    "completion_eoc": "EOC_CULT_TRANCE_DONE"
+  }
+]

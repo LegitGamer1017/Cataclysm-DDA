@@ -1,0 +1,63 @@
+[
+  {
+    "id": "cult_realm_qi_condensation",
+    "type": "mutation",
+    "name": "Qi Condensation",
+    "description": "The first realm.  Your dantian holds a flickering ember of refined Qi, and your body has begun purging mortal impurities.",
+    "points": 0,
+    "valid": false,
+    "purifiable": false,
+    "spells_learned": [ [ "spell_cult_sword_qi", 0 ] ]
+  },
+  {
+    "id": "cult_realm_foundation",
+    "type": "mutation",
+    "name": "Foundation Establishment",
+    "description": "Your foundation is laid.  Flesh knits denser, breath runs deeper, and cultivation no longer wars with your body.",
+    "points": 0,
+    "valid": false,
+    "purifiable": false,
+    "prereqs": [ "cult_realm_qi_condensation" ],
+    "enchantments": [ { "values": [ { "value": "MAX_HP", "multiply": 0.25 } ] } ],
+    "spells_learned": [ [ "spell_cult_qi_ward", 0 ] ]
+  },
+  {
+    "id": "cult_realm_golden_core",
+    "type": "mutation",
+    "name": "Golden Core",
+    "description": "A golden core turns slow within your dantian.  Thought sharpens; the world seems to move a fraction slower than you do.",
+    "points": 0,
+    "valid": false,
+    "purifiable": false,
+    "prereqs": [ "cult_realm_foundation" ],
+    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": 2 }, { "value": "SPEED", "multiply": 0.1 } ] } ],
+    "spells_learned": [ [ "spell_cult_wind_steps", 0 ] ]
+  },
+  {
+    "id": "cult_realm_nascent_soul",
+    "type": "mutation",
+    "name": "Nascent Soul",
+    "description": "A nascent soul stirs behind your eyes.  Arts that once strained you now unspool like breath.",
+    "points": 0,
+    "valid": false,
+    "purifiable": false,
+    "prereqs": [ "cult_realm_golden_core" ],
+    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": 4 }, { "value": "CASTING_TIME_MULTIPLIER", "multiply": -0.25 } ] } ],
+    "spells_learned": [ [ "spell_cult_qi_blast", 3 ], [ "spell_cult_qi_sense", 0 ] ]
+  },
+  {
+    "id": "cult_realm_soul_formation",
+    "type": "mutation",
+    "name": "Soul Formation",
+    "description": "V1 endgame cap.  The soul stands formed; what lies beyond is a matter for later volumes.",
+    "points": 0,
+    "valid": false,
+    "purifiable": false,
+    "prereqs": [ "cult_realm_nascent_soul" ],
+    "enchantments": [
+      {
+        "values": [ { "value": "INTELLIGENCE", "add": 6 }, { "value": "SPEED", "multiply": 0.2 }, { "value": "MAX_HP", "multiply": 0.5 } ]
+      }
+    ]
+  }
+]

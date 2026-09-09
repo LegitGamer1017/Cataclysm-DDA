@@ -1,0 +1,11 @@
+[
+  {
+    "id": "EOC_CULT_MENU_PROOF",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "effect": [
+      { "u_message": "Your jade slip hums faintly.  The framework stirs.", "type": "good" },
+      { "u_add_var": "cult_chain_proof", "value": "yes" }
+    ]
+  }
+]

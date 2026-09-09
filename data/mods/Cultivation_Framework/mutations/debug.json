@@ -1,0 +1,13 @@
+[
+  {
+    "id": "cult_debug_mode",
+    "type": "mutation",
+    "name": "Cultivation Debug",
+    "description": "QA scaffolding.  Debug-menu only; gates the cult_debug_* EOCs so they can never fire in normal play.",
+    "points": 0,
+    "valid": false,
+    "starting_trait": false,
+    "purifiable": false,
+    "debug": true
+  }
+]

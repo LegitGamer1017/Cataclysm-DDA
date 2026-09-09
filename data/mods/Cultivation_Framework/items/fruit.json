@@ -1,0 +1,11 @@
+[
+  {
+    "id": "cult_fruit_spirit",
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "name": { "str": "pale spirit fruit" },
+    "description": "A translucent fruit with something bright turning slowly inside.  It smells like rain on hot stone.  Eating it without knowing how to channel Qi would be\u2026 unwise.",
+    "copy-from": "apple",
+    "consumption_effect_on_conditions": [ "EOC_CULT_EAT_SPIRIT_FRUIT" ]
+  }
+]

@@ -1,0 +1,11 @@
+[
+  {
+    "type": "MOD_INFO",
+    "id": "cultivation",
+    "name": "Cultivation Framework",
+    "authors": [ "Path to Heaven contributors" ],
+    "description": "Path to Heaven cultivation framework (Path-to-Heaven-Design.md): Qi economy + trance meditation, generic 5-realm ladder with breakthroughs, tribulation/deviation, spell kit with Qi tax, on-ramps, debug kit, and the Grand Chariot Wisdom Law v1 law kit (sword style + 7 star-sword bonds).",
+    "category": "content",
+    "dependencies": [ "dda" ]
+  }
+]

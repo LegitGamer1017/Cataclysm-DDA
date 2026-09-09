@@ -1,0 +1,161 @@
+[
+  {
+    "id": "EOC_CULT_BREAK_QI_COND",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Entry realm: Qi Sense + a half-full dantian. No pill. Impure body = failed condensation (uniform fail rule, design \u00a716.6).",
+    "condition": { "and": [ { "u_has_trait": "qi_sense" }, { "math": [ "u_vitamin('cult_qi') >= 50" ] } ] },
+    "effect": [
+      {
+        "if": { "math": [ "u_vitamin('cult_impure_qi') >= 600" ] },
+        "then": [
+          { "math": [ "u_vitamin('cult_xp_generic') = u_vitamin('cult_xp_generic') / 2" ] },
+          { "u_add_effect": "effect_cult_meridian_wound", "duration": "30 days" },
+          { "math": [ "u_vitamin('cult_impure_qi') += 150" ] },
+          { "u_message": "The Qi rebels and scatters.  Your meridians tear.", "type": "bad" },
+          { "u_add_var": "cult_breakthrough_qi_cond_fail", "value": "yes" }
+        ],
+        "else": [
+          { "u_add_trait": "cult_realm_qi_condensation" },
+          { "math": [ "u_val('thirst') += 300" ] },
+          { "math": [ "u_calories() -= 1500" ] },
+          { "u_learn_recipe": "cult_pill_foundation" },
+          { "u_message": "The ember catches.  You are a cultivator.  Hunger claws at you.", "type": "good" },
+          { "u_add_var": "cult_breakthrough_qi_cond_success", "value": "yes" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "EOC_CULT_BREAK_FOUNDATION",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "condition": {
+      "and": [
+        { "u_has_trait": "cult_realm_qi_condensation" },
+        { "math": [ "u_vitamin('cult_xp_generic') >= 500" ] },
+        { "u_has_items": { "item": "cult_pill_foundation", "count": 1 } }
+      ]
+    },
+    "effect": [
+      {
+        "if": { "math": [ "u_vitamin('cult_impure_qi') >= 600" ] },
+        "then": [
+          { "math": [ "u_vitamin('cult_xp_generic') = u_vitamin('cult_xp_generic') / 2" ] },
+          { "u_add_effect": "effect_cult_meridian_wound", "duration": "30 days" },
+          { "math": [ "u_vitamin('cult_impure_qi') += 150" ] },
+          { "u_message": "The foundation cracks as it sets.  You will carry this wound.", "type": "bad" },
+          { "u_add_var": "cult_breakthrough_foundation_fail", "value": "yes" }
+        ],
+        "else": [
+          { "u_consume_item": "cult_pill_foundation", "count": 1 },
+          { "u_add_trait": "cult_realm_foundation" },
+          { "math": [ "u_val('thirst') += 300" ] },
+          { "math": [ "u_calories() -= 1500" ] },
+          { "u_learn_recipe": "cult_pill_core" },
+          { "u_message": "The foundation sets, square and true.  The rite devours your reserves.", "type": "good" },
+          { "u_add_var": "cult_breakthrough_foundation_success", "value": "yes" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "EOC_CULT_BREAK_GOLDEN",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Minor tribulation: theater + 3 bolts over 5 minutes (design \u00a717.1, EOC_CULT_TRIB_MINOR).",
+    "condition": {
+      "and": [
+        { "u_has_trait": "cult_realm_foundation" },
+        { "math": [ "u_vitamin('cult_xp_generic') >= 2000" ] },
+        { "u_has_items": { "item": "cult_pill_core", "count": 1 } }
+      ]
+    },
+    "effect": [
+      {
+        "if": { "math": [ "u_vitamin('cult_impure_qi') >= 600" ] },
+        "then": [
+          { "math": [ "u_vitamin('cult_xp_generic') = u_vitamin('cult_xp_generic') / 2" ] },
+          { "u_add_effect": "effect_cult_meridian_wound", "duration": "30 days" },
+          { "math": [ "u_vitamin('cult_impure_qi') += 150" ] },
+          { "u_message": "The core shatters in the crucible of your own filth.", "type": "bad" },
+          { "u_add_var": "cult_breakthrough_golden_fail", "value": "yes" }
+        ],
+        "else": [
+          { "u_consume_item": "cult_pill_core", "count": 1 },
+          { "u_add_trait": "cult_realm_golden_core" },
+          { "math": [ "u_val('thirst') += 300" ] },
+          { "math": [ "u_calories() -= 1500" ] },
+          { "u_learn_recipe": "cult_pill_nascent" },
+          {
+            "u_message": "Dark clouds gather.  The heavens have noticed you.  Your body screams for food and water.",
+            "type": "bad"
+          },
+          { "run_eocs": [ "EOC_CULT_TRIB_MINOR" ] },
+          { "u_add_var": "cult_tribulation_minor", "value": "yes" },
+          { "u_add_var": "cult_breakthrough_golden_success", "value": "yes" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "EOC_CULT_BREAK_NASCENT",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Major tribulation: full storm + 5 bolts + spawns (design \u00a717.1/17.2, EOC_CULT_TRIB_MAJOR).",
+    "condition": {
+      "and": [
+        { "u_has_trait": "cult_realm_golden_core" },
+        { "math": [ "u_vitamin('cult_xp_generic') >= 6000" ] },
+        { "u_has_items": { "item": "cult_pill_nascent", "count": 1 } }
+      ]
+    },
+    "effect": [
+      {
+        "if": { "math": [ "u_vitamin('cult_impure_qi') >= 600" ] },
+        "then": [
+          { "math": [ "u_vitamin('cult_xp_generic') = u_vitamin('cult_xp_generic') / 2" ] },
+          { "u_add_effect": "effect_cult_meridian_wound", "duration": "30 days" },
+          { "math": [ "u_vitamin('cult_impure_qi') += 150" ] },
+          { "u_message": "The nascent soul drowns before its first breath.", "type": "bad" },
+          { "u_add_var": "cult_breakthrough_nascent_fail", "value": "yes" }
+        ],
+        "else": [
+          { "u_consume_item": "cult_pill_nascent", "count": 1 },
+          { "u_add_trait": "cult_realm_nascent_soul" },
+          { "math": [ "u_val('thirst') += 300" ] },
+          { "math": [ "u_calories() -= 1500" ] },
+          {
+            "u_message": "The sky splits.  Something behind it is watching.  You are hollow with hunger and thirst.",
+            "type": "bad"
+          },
+          { "run_eocs": [ "EOC_CULT_TRIB_MAJOR" ] },
+          { "u_add_var": "cult_tribulation_major", "value": "yes" },
+          { "u_add_var": "cult_breakthrough_nascent_success", "value": "yes" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "EOC_CULT_BREAKTHROUGH_MENU",
+    "type": "effect_on_condition",
+    "eoc_type": "ACTIVATION",
+    "//": "Gated options hide via hide_failing (each target carries its gate as top-level condition).",
+    "effect": [
+      {
+        "run_eoc_selector": [
+          "EOC_CULT_BREAK_QI_COND",
+          "EOC_CULT_BREAK_FOUNDATION",
+          "EOC_CULT_BREAK_GOLDEN",
+          "EOC_CULT_BREAK_NASCENT",
+          "EOC_CULT_MENU_NOTHING"
+        ],
+        "title": "Breakthrough",
+        "names": [ "Qi Condensation", "Foundation Establishment", "Golden Core", "Nascent Soul", "Step back" ],
+        "keys": [ "1", "2", "3", "4", "5" ],
+        "allow_cancel": true,
+        "hide_failing": true
+      }
+    ]
+  }
+]

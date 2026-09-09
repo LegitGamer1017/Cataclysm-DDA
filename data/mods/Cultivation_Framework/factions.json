@@ -1,0 +1,7 @@
+[
+  {
+    "type": "MONSTER_FACTION",
+    "name": "cult_tribulation",
+    "hate": [ "player", "human", "zombie", "animal", "nether", "fungus", "triffid" ]
+  }
+]

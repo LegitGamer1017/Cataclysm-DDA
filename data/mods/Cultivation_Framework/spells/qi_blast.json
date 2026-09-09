@@ -1,0 +1,22 @@
+[
+  {
+    "id": "spell_cult_qi_blast",
+    "type": "SPELL",
+    "name": "Qi Blast",
+    "description": "A concentrated burst of cultivated Qi strikes a hostile target.",
+    "effect": "attack",
+    "shape": "blast",
+    "valid_targets": [ "hostile" ],
+    "flags": [ "SOMATIC", "NO_HANDS" ],
+    "spell_class": "NONE",
+    "magic_type": "cult_cultivation",
+    "base_energy_cost": 25,
+    "base_casting_time": 100,
+    "difficulty": 0,
+    "min_damage": 4,
+    "max_damage": 10,
+    "min_range": 4,
+    "max_range": 6,
+    "damage_type": "bash"
+  }
+]

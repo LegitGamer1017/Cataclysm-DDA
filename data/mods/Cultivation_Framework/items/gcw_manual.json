@@ -1,0 +1,23 @@
+[
+  {
+    "id": "cult_manual_dipper_chart",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "category": "tools",
+    "name": { "str": "Grand Chariot Manual" },
+    "description": "A heavy bamboo-bound folio of seven star charts, each overlaid with the diagram of a sword cut.  Marginal notes speak of the Chariot's turning and the deaths it shows.  The diagrams refuse to stir for those whose qi has not awakened.",
+    "looks_like": "manual_swordsmanship",
+    "weight": "500 g",
+    "volume": "500 ml",
+    "price": "80 USD",
+    "price_postapoc": "8 USD",
+    "material": [ "paper", "wood" ],
+    "symbol": "?",
+    "color": "light_blue",
+    "use_action": {
+      "type": "effect_on_conditions",
+      "description": "Study the star charts",
+      "effect_on_conditions": [ "EOC_CULT_GCW_LEARN" ]
+    }
+  }
+]

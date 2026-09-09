@@ -1,0 +1,35 @@
+[
+  {
+    "id": "mon_cult_hound",
+    "type": "MONSTER",
+    "copy-from": "mon_zombie_dog",
+    "name": { "str": "tribulation hound" },
+    "description": "A hound-shaped knot of heaven's displeasure, ozone rolling off its crackling hide.  It exists for one hour, and only to kill you.",
+    "default_faction": "cult_tribulation",
+    "speed": 120,
+    "hp": 30,
+    "melee_damage": [ { "damage_type": "cut", "amount": 3 }, { "damage_type": "electric", "amount": 4 } ],
+    "symbol": "d",
+    "color": "light_cyan"
+  },
+  {
+    "id": "mon_cult_storm_elem",
+    "type": "MONSTER",
+    "copy-from": "mon_frog_shocker",
+    "name": { "str": "lightning elemental" },
+    "description": "A writhing knot of storm Qi given spite.  It hurls its own substance at you and does not seem to mind the loss.",
+    "default_faction": "cult_tribulation",
+    "symbol": "E",
+    "color": "yellow"
+  },
+  {
+    "id": "mon_cult_inner_demon",
+    "type": "MONSTER",
+    "copy-from": "mon_zombie",
+    "name": { "str": "shadowy cultivator" },
+    "description": "A figure robed in your own doubts.  Is it real?  Does it matter?",
+    "default_faction": "nether",
+    "symbol": "@",
+    "color": "dark_gray"
+  }
+]

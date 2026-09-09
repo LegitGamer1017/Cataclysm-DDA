@@ -1,0 +1,90 @@
+[
+  {
+    "id": "cult_gcw_dubhe",
+    "type": "mutation",
+    "name": "Dubhe Chant",
+    "description": "The first star of the Grand Chariot wheels into alignment with your blade.  The Chariot shows death, and your cuts begin to mean it.  +10% melee damage.",
+    "points": 0,
+    "valid": false,
+    "purifiable": false,
+    "enchantments": [ { "values": [ { "value": "MELEE_DAMAGE", "multiply": 0.1 } ] } ]
+  },
+  {
+    "id": "cult_gcw_merak",
+    "type": "mutation",
+    "name": "Merak Chant",
+    "description": "The second star lends its turning to your wrists.  Your sword moves a shade faster than your foe expects.  Faster melee attacks.",
+    "points": 0,
+    "valid": false,
+    "purifiable": false,
+    "prereqs": [ "cult_gcw_dubhe" ],
+    "enchantments": [ { "values": [ { "value": "ATTACK_SPEED", "add": -8 } ] } ]
+  },
+  {
+    "id": "cult_gcw_phegda",
+    "type": "mutation",
+    "name": "Phegda Chant",
+    "description": "The third star settles behind your ribs like ballast.  You stand against blows that would have moved you.  Slight bash and cut armor.",
+    "points": 0,
+    "valid": false,
+    "purifiable": false,
+    "prereqs": [ "cult_gcw_merak" ],
+    "enchantments": [ { "incoming_damage_mod": [ { "type": "bash", "add": 2 }, { "type": "cut", "add": 2 } ] } ]
+  },
+  {
+    "id": "cult_gcw_megrez",
+    "type": "mutation",
+    "name": "Megrez Chant",
+    "description": "The fourth star keeps your dantian fed while the blade works.  Sustained swordplay costs you less.  Reduced stamina consumption in melee.",
+    "points": 0,
+    "valid": false,
+    "purifiable": false,
+    "prereqs": [ "cult_gcw_phegda" ],
+    "enchantments": [ { "values": [ { "value": "MELEE_STAMINA_CONSUMPTION", "add": 50 } ] } ]
+  },
+  {
+    "id": "cult_gcw_alioth",
+    "type": "mutation",
+    "name": "Alioth Chant",
+    "description": "The fifth star sharpens the eye behind the blade.  You see the cut before you make it.  +1 melee accuracy.",
+    "points": 0,
+    "valid": false,
+    "purifiable": false,
+    "prereqs": [ "cult_gcw_megrez" ],
+    "enchantments": [ { "values": [ { "value": "MELEE_TO_HIT", "add": 1 } ] } ]
+  },
+  {
+    "id": "cult_gcw_mizar",
+    "type": "mutation",
+    "name": "Mizar Chant",
+    "description": "The sixth star teaches your body to be where the blade is not.  +1 dodge chance.",
+    "points": 0,
+    "valid": false,
+    "purifiable": false,
+    "prereqs": [ "cult_gcw_alioth" ],
+    "enchantments": [ { "values": [ { "value": "DODGE_CHANCE", "add": 1 } ] } ]
+  },
+  {
+    "id": "cult_gcw_alkaid",
+    "type": "mutation",
+    "name": "Alkaid Chant",
+    "description": "The seventh star burns at the handle of the Chariot.  You have learned the Northsword's true name and the last form of the law.  Slightly faster movement; grants Possessed Northsword.",
+    "points": 0,
+    "valid": false,
+    "purifiable": false,
+    "prereqs": [ "cult_gcw_mizar" ],
+    "enchantments": [ { "values": [ { "value": "SPEED", "multiply": 0.05 } ] } ],
+    "spells_learned": [ [ "spell_cult_gcw_northsword", 0 ] ]
+  },
+  {
+    "id": "cult_gcw_sevenstar",
+    "type": "mutation",
+    "name": "Sevenstar Convergence",
+    "description": "All seven stars of the Grand Chariot turn as one within you.  The shape of the Chariot shows death, and you have become its pointer.  +10% melee damage, +1 dodge chance.",
+    "points": 0,
+    "valid": false,
+    "purifiable": false,
+    "prereqs": [ "cult_gcw_alkaid" ],
+    "enchantments": [ { "values": [ { "value": "MELEE_DAMAGE", "multiply": 0.1 }, { "value": "DODGE_CHANCE", "add": 1 } ] } ]
+  }
+]

@@ -1,0 +1,43 @@
+[
+  {
+    "type": "martial_art",
+    "id": "style_cult_grand_chariot",
+    "name": { "str": "Grand Chariot Wisdom Law" },
+    "description": "The blade doctrines of the Grand Chariot, a Metal law of the ancient Taiyi school.  Its seven forms trace the stars of the Dipper, and its masters say the Chariot's turning shows the deaths of men.  Armor penetration grows with Perception and accuracy with Intelligence.  Those who take up this law excel at the sword, but it is slow to cultivate.",
+    "initiate": [ "You align your stance with the seven stars of the Grand Chariot.", "%s takes on the stance of the Grand Chariot." ],
+    "priority": 1,
+    "learn_difficulty": 7,
+    "primary_skill": "cutting",
+    "strictly_melee": true,
+    "static_buffs": [
+      {
+        "id": "buff_cult_gcw_stance",
+        "name": "Grand Chariot Stance",
+        "description": "Your breathing wheels with the Dipper; each cut falls where the stars have already pointed.\n\n+0.5 armor penetration per point of Perception against cut and stab.\n+0.25 accuracy per point of Intelligence.",
+        "melee_allowed": true,
+        "flat_bonuses": [
+          { "stat": "arpen", "type": "cut", "scaling-stat": "per", "scale": 0.5 },
+          { "stat": "arpen", "type": "stab", "scaling-stat": "per", "scale": 0.5 },
+          { "stat": "hit", "scaling-stat": "int", "scale": 0.25 }
+        ]
+      }
+    ],
+    "oncrit_buffs": [
+      {
+        "id": "buff_cult_gcw_starfall",
+        "name": "Starfall Cut",
+        "description": "A critical cut guided by the Chariot's omen of death.\n\n+15% melee damage.\nLasts 2 turns.",
+        "skill_requirements": [ { "name": "melee", "level": 4 } ],
+        "melee_allowed": true,
+        "buff_duration": 2,
+        "mult_bonuses": [
+          { "stat": "damage", "type": "bash", "scale": 1.15 },
+          { "stat": "damage", "type": "cut", "scale": 1.15 },
+          { "stat": "damage", "type": "stab", "scale": 1.15 }
+        ]
+      }
+    ],
+    "oncrit_eocs": [ "EOC_CULT_SWORD_QI_TAX" ],
+    "weapon_category": [ "MEDIUM_SWORDS", "LONG_SWORDS", "GREAT_SWORDS", "LONG_THRUSTING_SWORDS" ]
+  }
+]

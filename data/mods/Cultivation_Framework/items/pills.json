@@ -1,0 +1,44 @@
+[
+  {
+    "id": "cult_pill_foundation",
+    "type": "ITEM",
+    "category": "spare_parts",
+    "name": { "str": "foundation establishment pill" },
+    "description": "A gray, chalky pill that smells of charcoal and rain.  Consumed by the breakthrough rite, not by mouth.  (PLACEHOLDER recipe: real herb alchemy arrives with the alchemy lane.)",
+    "weight": "10 g",
+    "volume": "10 ml",
+    "price": "500 USD",
+    "price_postapoc": "50 USD",
+    "material": [ "powder" ],
+    "symbol": "o",
+    "color": "light_gray"
+  },
+  {
+    "id": "cult_pill_core",
+    "type": "ITEM",
+    "category": "spare_parts",
+    "name": { "str": "core formation pill" },
+    "description": "A dense amber pill, warm to the touch.  Consumed by the breakthrough rite, not by mouth.  (PLACEHOLDER recipe: real herb alchemy arrives with the alchemy lane.)",
+    "weight": "10 g",
+    "volume": "10 ml",
+    "price": "2000 USD",
+    "price_postapoc": "200 USD",
+    "material": [ "powder" ],
+    "symbol": "o",
+    "color": "yellow"
+  },
+  {
+    "id": "cult_pill_nascent",
+    "type": "ITEM",
+    "category": "spare_parts",
+    "name": { "str": "nascent soul pill" },
+    "description": "A violet pill that seems to look back at you.  Consumed by the breakthrough rite, not by mouth.  (PLACEHOLDER recipe: real herb alchemy arrives with the alchemy lane.)",
+    "weight": "10 g",
+    "volume": "10 ml",
+    "price": "8000 USD",
+    "price_postapoc": "800 USD",
+    "material": [ "powder" ],
+    "symbol": "o",
+    "color": "magenta"
+  }
+]
