@@ -25,14 +25,21 @@
     "id": "EOC_CULT_EAT_SPIRIT_FRUIT",
     "type": "effect_on_condition",
     "eoc_type": "ACTIVATION",
-    "//": "Fruit on-ramp (design §5, §20.1). Power without control burns; power with control still stains.",
+    "//": "Fruit on-ramp (design §5, §15.4, §15.6, §20.1). Power without control burns; power with control still stains. Grants TO CAP (design §15.4): the +300 is clamped to the realm soft-cap immediately (Mortal 50 ... Soul 10000) so the number never reads out of range. Also grants a progression head-start (cult_xp_generic): +100 unsensed / +200 sensed. This skips no gate — the first breakthrough is Qi-gated (50 + manual), so the XP carries into the Qi-Cond -> Foundation gate (500). The heat burn is followed by an explicit onfire clear: the engine rolls ignition on heat damage (src/creature.cpp), and a tutorial fruit must scorch, not immolate.",
     "effect": [
       {
         "if": { "not": { "u_has_trait": "qi_sense" } },
         "then": [
           { "math": [ "u_vitamin('cult_qi') += 300" ] },
+          {
+            "math": [
+              "u_vitamin('cult_qi') = min(u_vitamin('cult_qi'), u_has_trait('cult_realm_soul_formation') ? 10000 : u_has_trait('cult_realm_nascent_soul') ? 6000 : u_has_trait('cult_realm_golden_core') ? 3000 : u_has_trait('cult_realm_foundation') ? 1000 : u_has_trait('cult_realm_qi_condensation') ? 300 : 50)"
+            ]
+          },
           { "math": [ "u_vitamin('cult_impure_qi') += 100" ] },
+          { "math": [ "u_vitamin('cult_xp_generic') += 100" ] },
           { "u_deal_damage": "heat", "amount": 15, "bodypart": "torso" },
+          { "u_lose_effect": "onfire" },
           {
             "u_message": "A burst of energy floods you, too big to hold.  You feel about to come apart.",
             "type": "bad"
@@ -45,8 +52,17 @@
         ],
         "else": [
           { "math": [ "u_vitamin('cult_qi') += 300" ] },
+          {
+            "math": [
+              "u_vitamin('cult_qi') = min(u_vitamin('cult_qi'), u_has_trait('cult_realm_soul_formation') ? 10000 : u_has_trait('cult_realm_nascent_soul') ? 6000 : u_has_trait('cult_realm_golden_core') ? 3000 : u_has_trait('cult_realm_foundation') ? 1000 : u_has_trait('cult_realm_qi_condensation') ? 300 : 50)"
+            ]
+          },
           { "math": [ "u_vitamin('cult_impure_qi') += 30" ] },
-          { "u_message": "The fruit dissolves into clean fire.  Your dantian drinks deep.", "type": "good" },
+          { "math": [ "u_vitamin('cult_xp_generic') += 200" ] },
+          {
+            "u_message": "The fruit dissolves into clean fire.  Your dantian drinks deep, and something within you advances.",
+            "type": "good"
+          },
           { "u_add_var": "cult_onramp_fruit", "value": "yes" }
         ]
       }

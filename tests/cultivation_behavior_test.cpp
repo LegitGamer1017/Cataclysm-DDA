@@ -89,6 +89,9 @@ TEST_CASE( "cultivation/tick-clamps-to-soft-cap", "[cultivation][behavior]" )
     clear_avatar();
     clear_map_without_vision();
     avatar &dummy = get_avatar();
+    // Qi Condensation soft-cap is 300 (design §15.2); realm traits are required
+    // for the realm rungs of the clamp ladder.
+    dummy.set_mutation( trait_id( "cult_realm_qi_condensation" ) );
     dummy.vitamin_set( vitamin_id( "cult_qi" ), 10000 );
 
     autoplay::seed_recurring_eocs( dummy );
@@ -98,11 +101,30 @@ TEST_CASE( "cultivation/tick-clamps-to-soft-cap", "[cultivation][behavior]" )
     CHECK( autoplay::var_is( dummy, "cult_meditation_capped", "yes" ) );
 }
 
+TEST_CASE( "cultivation/mortal-qi-caps-at-50", "[cultivation][behavior]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &dummy = get_avatar();
+    // A realm-less mortal (qi_sense only) clamps at 50, not the old flat 300.
+    give_sense( dummy );
+    dummy.vitamin_set( vitamin_id( "cult_qi" ), 1000 );
+
+    autoplay::seed_recurring_eocs( dummy );
+    autoplay::advance_time( dummy, 61_seconds );
+
+    CHECK( dummy.vitamin_get( vitamin_id( "cult_qi" ) ) == 50 );
+    CHECK( autoplay::var_is( dummy, "cult_meditation_capped", "yes" ) );
+}
+
 TEST_CASE( "cultivation/wound-caps-qi-150", "[cultivation][behavior]" )
 {
     clear_avatar();
     clear_map_without_vision();
     avatar &dummy = get_avatar();
+    // Wound cap (150) only bites when it is below the realm cap, so use a
+    // cultivator (Qi Cond, cap 300) rather than a realm-less mortal (cap 50).
+    dummy.set_mutation( trait_id( "cult_realm_qi_condensation" ) );
     dummy.add_effect( efftype_id( "effect_cult_meridian_wound" ), 1_days );
     dummy.vitamin_set( vitamin_id( "cult_qi" ), 1000 );
 
@@ -317,8 +339,14 @@ TEST_CASE( "cultivation/fruit-burns-unsensed", "[cultivation][behavior]" )
     avatar &dummy = get_avatar();
 
     REQUIRE( autoplay::activate_eoc( dummy, "EOC_CULT_EAT_SPIRIT_FRUIT" ) );
-    CHECK( dummy.vitamin_get( vitamin_id( "cult_qi" ) ) == 300 );
+    // Realm-less mortal: the +300 grant clamps to the Mortal soft-cap (50),
+    // not 300 (design §15.4 "grants to cap"; regression for the 300/50 bug).
+    CHECK( dummy.vitamin_get( vitamin_id( "cult_qi" ) ) == 50 );
     CHECK( dummy.vitamin_get( vitamin_id( "cult_impure_qi" ) ) == 100 );
+    // Progression head-start (design §15.6): unsensed pays less than sensed.
+    CHECK( dummy.vitamin_get( vitamin_id( "cult_xp_generic" ) ) == 100 );
+    // The fruit scorches but must never leave you burning.
+    CHECK( !dummy.has_effect( efftype_id( "onfire" ) ) );
     CHECK( autoplay::var_is( dummy, "cult_onramp_fruit", "yes" ) );
 }
 
@@ -328,10 +356,14 @@ TEST_CASE( "cultivation/fruit-feeds-sensed", "[cultivation][behavior]" )
     clear_map_without_vision();
     avatar &dummy = get_avatar();
     give_sense( dummy );
+    // A cultivator (Qi Cond, cap 300): the same +300 grant now fills to 300.
+    dummy.set_mutation( trait_id( "cult_realm_qi_condensation" ) );
 
     REQUIRE( autoplay::activate_eoc( dummy, "EOC_CULT_EAT_SPIRIT_FRUIT" ) );
     CHECK( dummy.vitamin_get( vitamin_id( "cult_qi" ) ) == 300 );
     CHECK( dummy.vitamin_get( vitamin_id( "cult_impure_qi" ) ) == 30 );
+    // The controlled path pays more progression XP than the wild one (200 vs 100).
+    CHECK( dummy.vitamin_get( vitamin_id( "cult_xp_generic" ) ) == 200 );
     CHECK( autoplay::var_is( dummy, "cult_onramp_fruit", "yes" ) );
 }
 

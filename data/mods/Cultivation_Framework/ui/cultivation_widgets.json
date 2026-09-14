@@ -126,12 +126,12 @@
     "style": "graph",
     "var": "custom",
     "custom_var": {
-      "value": { "math": [ "u_vitamin('cult_xp_generic')" ] },
+      "value": { "math": [ "u_has_trait('cult_realm_qi_condensation') ? u_vitamin('cult_xp_generic') : u_vitamin('cult_qi')" ] },
       "range": [
         { "math": [ "0" ] },
         {
           "math": [
-            "u_has_trait('cult_realm_soul_formation') ? 15000 : u_has_trait('cult_realm_nascent_soul') ? 15000 : u_has_trait('cult_realm_golden_core') ? 6000 : u_has_trait('cult_realm_foundation') ? 2000 : 500"
+            "u_has_trait('cult_realm_qi_condensation') ? (u_has_trait('cult_realm_soul_formation') ? 15000 : u_has_trait('cult_realm_nascent_soul') ? 15000 : u_has_trait('cult_realm_golden_core') ? 6000 : u_has_trait('cult_realm_foundation') ? 2000 : 500) : 50"
           ]
         }
       ]
@@ -146,7 +146,10 @@
     "type": "widget",
     "style": "number",
     "var": "custom",
-    "custom_var": { "value": { "math": [ "u_vitamin('cult_xp_generic')" ] }, "range": [ { "math": [ "0" ] }, { "math": [ "15000" ] } ] },
+    "custom_var": {
+      "value": { "math": [ "u_has_trait('cult_realm_qi_condensation') ? u_vitamin('cult_xp_generic') : u_vitamin('cult_qi')" ] },
+      "range": [ { "math": [ "0" ] }, { "math": [ "15000" ] } ]
+    },
     "text_align": "right",
     "padding": 3,
     "colors": [ "c_red", "c_yellow", "c_light_green" ]
@@ -159,7 +162,7 @@
     "custom_var": {
       "value": {
         "math": [
-          "u_has_trait('cult_realm_soul_formation') ? 15000 : u_has_trait('cult_realm_nascent_soul') ? 15000 : u_has_trait('cult_realm_golden_core') ? 6000 : u_has_trait('cult_realm_foundation') ? 2000 : 500"
+          "u_has_trait('cult_realm_qi_condensation') ? (u_has_trait('cult_realm_soul_formation') ? 15000 : u_has_trait('cult_realm_nascent_soul') ? 15000 : u_has_trait('cult_realm_golden_core') ? 6000 : u_has_trait('cult_realm_foundation') ? 2000 : 500) : 50"
         ]
       },
       "range": [ { "math": [ "0" ] }, { "math": [ "15000" ] } ]
@@ -208,11 +211,93 @@
     "widgets": [ "cnt_xp_label", "cnt_xp_graph", "cnt_xp_num", "cnt_xp_slash", "cnt_xp_next_num" ]
   },
   {
+    "id": "cnt_gate_hint",
+    "type": "widget",
+    "style": "text",
+    "//": "D36 no-hidden-rules surface: the NEXT gate's non-numeric requirement. Empty (hidden) when nothing applies (W_DISABLED_WHEN_EMPTY).",
+    "clauses": [
+      {
+        "id": "mortal",
+        "text": "Needs: Faded Manual, then Qi 50",
+        "color": "c_yellow",
+        "condition": {
+          "not": {
+            "or": [
+              { "u_has_trait": "cult_realm_qi_condensation" },
+              { "u_has_trait": "cult_realm_foundation" },
+              { "u_has_trait": "cult_realm_golden_core" },
+              { "u_has_trait": "cult_realm_nascent_soul" },
+              { "u_has_trait": "cult_realm_soul_formation" }
+            ]
+          }
+        }
+      },
+      {
+        "id": "qicond",
+        "text": "Needs: foundation pill",
+        "color": "c_light_blue",
+        "condition": { "u_has_trait": "cult_realm_qi_condensation" }
+      },
+      {
+        "id": "foundation",
+        "text": "Needs: core pill",
+        "color": "c_light_blue",
+        "condition": { "u_has_trait": "cult_realm_foundation" }
+      },
+      {
+        "id": "golden",
+        "text": "Needs: nascent pill",
+        "color": "c_light_blue",
+        "condition": { "u_has_trait": "cult_realm_golden_core" }
+      },
+      {
+        "id": "nascent",
+        "text": "Capstone: Soul Formation (not yet built)",
+        "color": "c_dark_gray",
+        "condition": { "u_has_trait": "cult_realm_nascent_soul" }
+      },
+      {
+        "id": "soul",
+        "text": "",
+        "color": "c_dark_gray",
+        "condition": { "u_has_trait": "cult_realm_soul_formation" }
+      }
+    ],
+    "flags": [ "W_LABEL_NONE", "W_DISABLED_WHEN_EMPTY" ]
+  },
+  {
+    "id": "cnt_impurity",
+    "type": "widget",
+    "style": "text",
+    "label": "Impure",
+    "//": "D36 surface for the impurity bands (design §15.4). Vague + banded, MoM Nether-Attunement style: hidden while safe (<300); symbol grows and reddens with danger. The exact number lives only in 'Sense yourself' (EOC_CULT_STATUS).",
+    "clauses": [
+      { "id": "safe", "text": "", "color": "c_black", "condition": { "math": [ "u_vitamin('cult_impure_qi') < 300" ] } },
+      {
+        "id": "murky",
+        "text": "<color_yellow>~</color>",
+        "condition": { "and": [ { "math": [ "u_vitamin('cult_impure_qi') >= 300" ] }, { "math": [ "u_vitamin('cult_impure_qi') < 600" ] } ] }
+      },
+      {
+        "id": "turbid",
+        "text": "<color_light_red>~~</color>",
+        "condition": { "and": [ { "math": [ "u_vitamin('cult_impure_qi') >= 600" ] }, { "math": [ "u_vitamin('cult_impure_qi') < 900" ] } ] }
+      },
+      {
+        "id": "foul",
+        "text": "<color_red>~~~</color>",
+        "condition": { "math": [ "u_vitamin('cult_impure_qi') >= 900" ] }
+      }
+    ],
+    "padding": 0,
+    "flags": [ "W_DISABLED_WHEN_EMPTY" ]
+  },
+  {
     "id": "cultivation_sidebar_block",
     "type": "widget",
     "style": "layout",
     "label": "Cultivation",
     "arrange": "rows",
-    "widgets": [ "cnt_qi_row", "cnt_realm", "cnt_xp_row" ]
+    "widgets": [ "cnt_qi_row", "cnt_realm", "cnt_xp_row", "cnt_gate_hint", "cnt_impurity" ]
   }
 ]

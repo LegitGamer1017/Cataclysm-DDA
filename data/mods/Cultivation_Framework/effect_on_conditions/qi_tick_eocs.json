@@ -6,7 +6,7 @@
     "recurrence": 60,
     "global": true,
     "run_for_npcs": false,
-    "//": "Lane-1 heartbeat (design §15). Clamp -> stale-trance cleanup -> fatigue clear -> meditate branch. Realm soft-cap ladder arrives Lane 2; until then the flat 300 cap stands.",
+    "//": "Lane-1 heartbeat (design §15). Clamp -> stale-trance cleanup -> fatigue clear -> meditate branch. Soft-cap ladder: realms from Soul Formation down; realm-less mortals clamp to 50 (design §15.2).",
     "effect": [
       {
         "if": { "and": [ { "u_has_trait": "cult_realm_soul_formation" }, { "math": [ "u_vitamin('cult_qi') > 10000" ] } ] },
@@ -25,8 +25,14 @@
                     "then": [ { "math": [ "u_vitamin('cult_qi') = 1000" ] }, { "u_add_var": "cult_meditation_capped", "value": "yes" } ],
                     "else": [
                       {
-                        "if": { "math": [ "u_vitamin('cult_qi') > 300" ] },
-                        "then": [ { "math": [ "u_vitamin('cult_qi') = 300" ] }, { "u_add_var": "cult_meditation_capped", "value": "yes" } ]
+                        "if": { "and": [ { "u_has_trait": "cult_realm_qi_condensation" }, { "math": [ "u_vitamin('cult_qi') > 300" ] } ] },
+                        "then": [ { "math": [ "u_vitamin('cult_qi') = 300" ] }, { "u_add_var": "cult_meditation_capped", "value": "yes" } ],
+                        "else": [
+                          {
+                            "if": { "math": [ "u_vitamin('cult_qi') > 50" ] },
+                            "then": [ { "math": [ "u_vitamin('cult_qi') = 50" ] }, { "u_add_var": "cult_meditation_capped", "value": "yes" } ]
+                          }
+                        ]
                       }
                     ]
                   }
@@ -162,8 +168,14 @@
     "recurrence": 300,
     "global": true,
     "run_for_npcs": false,
-    "//": "Passive seep for the awakened (design §15.2). No hook: the harness targets meditation, not seep.",
-    "condition": { "and": [ { "u_has_trait": "qi_sense" }, { "math": [ "u_vitamin('cult_qi') < 300" ] } ] },
+    "//": "Passive seep for the awakened, realm-gated (design §15.2): mortals (no realm) get nothing; Qi Condensation and above seep toward the Qi-Cond cap. No hook: the harness targets meditation, not seep.",
+    "condition": {
+      "and": [
+        { "u_has_trait": "qi_sense" },
+        { "u_has_trait": "cult_realm_qi_condensation" },
+        { "math": [ "u_vitamin('cult_qi') < 300" ] }
+      ]
+    },
     "effect": [ { "math": [ "u_vitamin('cult_qi') += 1" ] } ]
   },
   {
@@ -180,8 +192,15 @@
     "id": "EOC_CULT_GRANT_QI",
     "type": "effect_on_condition",
     "eoc_type": "ACTIVATION",
-    "//": "Callable library (design §15.1). Caller passes variables:{amount:N}. XP library deferred to Lane 2 with the path traits.",
-    "effect": [ { "math": [ "u_vitamin('cult_qi') += amount" ] } ]
+    "//": "Callable library (design §15.1). Caller passes variables:{amount:N}. Grants then clamps to the realm soft-cap, so every caller is safe from over-cap reads (the cap ternary mirrors the tick/HUD; see design §15.2). XP library deferred to Lane 2 with the path traits.",
+    "effect": [
+      { "math": [ "u_vitamin('cult_qi') += amount" ] },
+      {
+        "math": [
+          "u_vitamin('cult_qi') = min(u_vitamin('cult_qi'), u_has_trait('cult_realm_soul_formation') ? 10000 : u_has_trait('cult_realm_nascent_soul') ? 6000 : u_has_trait('cult_realm_golden_core') ? 3000 : u_has_trait('cult_realm_foundation') ? 1000 : u_has_trait('cult_realm_qi_condensation') ? 300 : 50)"
+        ]
+      }
+    ]
   },
   {
     "id": "EOC_CULT_ADD_IMPURE",
@@ -247,11 +266,49 @@
     "//": "H-track readout (design §20.2). Messages are player-only; the harness asserts the underlying vitamins directly.",
     "effect": [
       { "math": [ "qi_now = u_vitamin('cult_qi')" ] },
+      {
+        "math": [
+          "qi_cap = u_has_trait('cult_realm_soul_formation') ? 10000 : u_has_trait('cult_realm_nascent_soul') ? 6000 : u_has_trait('cult_realm_golden_core') ? 3000 : u_has_trait('cult_realm_foundation') ? 1000 : u_has_trait('cult_realm_qi_condensation') ? 300 : 50"
+        ]
+      },
       { "math": [ "imp_now = u_vitamin('cult_impure_qi')" ] },
       { "math": [ "fat_now = u_vitamin('cult_mental_fatigue')" ] },
       {
-        "u_message": "Qi: <context_val:qi_now>/300.  Impurity: <context_val:imp_now>.  Fatigue: <context_val:fat_now>.",
-        "type": "info"
+        "if": { "math": [ "u_vitamin('cult_impure_qi') >= 900" ] },
+        "then": [
+          {
+            "u_message": "Qi: <context_val:qi_now>/<context_val:qi_cap>.  Impurity: <context_val:imp_now>/1000 (foul).  Fatigue: <context_val:fat_now>.",
+            "type": "bad"
+          }
+        ],
+        "else": [
+          {
+            "if": { "math": [ "u_vitamin('cult_impure_qi') >= 600" ] },
+            "then": [
+              {
+                "u_message": "Qi: <context_val:qi_now>/<context_val:qi_cap>.  Impurity: <context_val:imp_now>/1000 (turbid).  Fatigue: <context_val:fat_now>.",
+                "type": "bad"
+              }
+            ],
+            "else": [
+              {
+                "if": { "math": [ "u_vitamin('cult_impure_qi') >= 300" ] },
+                "then": [
+                  {
+                    "u_message": "Qi: <context_val:qi_now>/<context_val:qi_cap>.  Impurity: <context_val:imp_now>/1000 (murky).  Fatigue: <context_val:fat_now>.",
+                    "type": "info"
+                  }
+                ],
+                "else": [
+                  {
+                    "u_message": "Qi: <context_val:qi_now>/<context_val:qi_cap>.  Impurity: <context_val:imp_now>/1000 (clear).  Fatigue: <context_val:fat_now>.",
+                    "type": "info"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
       }
     ]
   },
