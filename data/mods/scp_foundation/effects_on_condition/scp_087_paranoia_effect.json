@@ -1,0 +1,28 @@
+[
+  {
+    "//": "SCP-087 PARANOIA - THE VISIBLE EFFECT.  This is the stackable status shown in the effects tab.  Its intensity is the visible ladder: each application raises it by 1 up to a hard cap of 99.  It is grown by EOC_SCP_087_PARANOIA (a RECURRING EOC keyed to the loop counter), never by raw avatar_moves, so standing still does not accelerate it.",
+    "//2": "The actual mechanical pressure is the SEPARATE morale point 'morale_scp_087_paranoia' applied with capped:true (see scp_087_paranoia_morale.json).  Splitting them lets the effect carry the descriptive weight while the morale carries the mechanical weight, and the two stay in step because both are driven by the same loop counter.",
+    "type": "effect_type",
+    "id": "scp_087_paranoia",
+    "name": [ "That sound" ],
+    "desc": [
+      "The dark in the stairwell keeps doing something almost coherent.  You keep expecting the landing to be a different one.  It never is, and you are not sure which of those you fear more."
+    ],
+    "show_in_info": true,
+    "rating": "bad",
+    "max_intensity": 99,
+    "int_add_val": 1
+  },
+  {
+    "//": "SCP-087 CONTACT - the spike applied when SCP-087-1 reaches the player (non-lethal, per the agreed design) and by the sleep-interrupt beat.  One-shot, no stacking - it is a jolt, not a status.",
+    "type": "effect_type",
+    "id": "scp_087_contact",
+    "name": [ "Mouthful of dark" ],
+    "desc": [
+      "It was right there.  It was at your throat, and then it was not.  For a moment the stairwell smelled like a held breath."
+    ],
+    "show_in_info": true,
+    "rating": "bad",
+    "max_intensity": 1
+  }
+]

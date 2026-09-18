@@ -1,0 +1,43 @@
+[
+  {
+    "//": "THE SEAM TRAP.  This is how the endless descent is faked within CDDA's hard limit of 10 z-levels (src/map_scale_constants.h:47, OVERMAP_DEPTH = 10).  The player walks onto this tile at the bottom of the deepest authored flight and is silently teleported to a layout-identical landing near the top of the shaft.",
+    "//2": "It is a trap rather than terrain logic because traps fire on ENTRY with no input from the player (src/trapfunc.cpp:502-505 writes the trap's own coordinates to the 'trap_location' context variable before running the action).  The loop must happen TO the player, not be chosen by them.",
+    "//3": "NEVER SEEN, NEVER DISARMED.  'always_invisible': true is the mechanism that actually does the work: trap::can_see returns false for it before anything else is considered (src/trap.cpp:311-313), and the 'you spotted a trap!' message is suppressed by the same predicate (src/map.cpp:11336).  'visibility' is 99, and it MUST NOT be set to -1 (idempotent-looking fix, but a genuine inversion): a negative visibility does not mean 'extra hidden', it means the OPPOSITE.  can_see's fallback is `return visibility < 0 || p.knows_trap( pos )` (src/trap.cpp:314) - so a negative value reads as ALWAYS SEEN - and trap::detect_trap is `return roll > visibility` (src/trap.cpp:301), so with any negative value every detection roll succeeds.  A negative value here was harmless only because always_invisible short-circuits first, which is a landmine if that flag is ever removed.  99 matches the upstream precedent for an action-eocs teleport trap, tr_glimmer_floor (data/json/traps.json:182-194, visibility 99 + always_invisible).  'difficulty': 99 and 'avoidance': 99 so it can never be disarmed or stepped around.",
+    "//4": "'flags': [ 'UNDODGEABLE' ] is the EXPLICIT, intended mechanism for 'you cannot step around this'.  It is a hard short-circuit in the trap-avoidance path: both map::creature_on_trap and map::maybe_trigger_trap check `!tr.has_flag( json_flag_UNDODGEABLE )` BEFORE ever calling Character::avoid_trap (src/map.cpp:11166, 11334).  Without the flag, undodgeability rests only on the arithmetic of avoidance 99: avoid_trap rolls dice(3, dex + dodge*1.5) against dice(6, 99) when the trap cannot be seen (src/character.cpp:7549-7554, tr.can_see() false because always_invisible), which no realistic character beats - but that is an emergent property of the numbers, not a stated intent.  UNDODGEABLE states it, and keeps the trap correct even if the avoidance dial is ever retuned.  Traps parse 'flags' at src/trap.cpp:140, and the flag is used throughout data/json/traps.json.",
+    "//5": "AVATAR_ONLY IS LOAD-BEARING (B1 FIX) - without it this trap fires for ANY creature, and SCP-087-1 would drive the loop counter itself.  Monsters trigger traps as they move: monster::move() calls here.creature_on_trap( *this ) (src/monmove.cpp:2381).  map::maybe_trigger_trap filters only null, benign and AVATAR_ONLY traps (src/map.cpp:11318-11348 - `if( tr.has_flag( json_flag_AVATAR_ONLY ) && !c.is_avatar() ) { return; }` at 11330-11332), and because the trap is also UNDODGEABLE the avoidance short-circuit at 11334 is skipped for every creature, so there is no roll to save it.  trapfunc::eocs then builds `dialogue d( get_talker_for( critter ), nullptr )` (src/trapfunc.cpp:504), ie the triggering creature is ALPHA - so a pursuer crossing the seam during the chase would run EOC_SCP_087_SEAM with ITSELF as u_: it would increment scp_087_loops, teleport itself to z-1, and at the 5 / 13 thresholds run PHASE5 or EJECT as the actor - resetting the globals and retiring the pursuer while the player was still in the shaft.  AVATAR_ONLY is the documented flag for exactly this (doc/JSON/JSON_FLAGS.md:1658 'Only the player character will trigger this trap'; doc/JSON/JSON_INFO.md:2743), and the base game already pairs it with an action:eocs trap - see data/json/effects_on_condition/nether_eocs/highland_dimension.json:110, which uses the same [ UNDODGEABLE, AVATAR_ONLY ] pair.",
+    "//6": "DO NOT REMOVE AVATAR_ONLY.  EOC_SCP_087_SEAM also carries 'condition': 'u_is_avatar' as a second line of defence (see effects_on_condition/scp_087_seam.json), but the flag is the primary mechanism - it stops the trap before the EOC is ever reached.",
+    "type": "trap",
+    "id": "tr_scp_087_seam",
+    "name": "concrete step",
+    "color": "light_gray",
+    "symbol": ".",
+    "visibility": 99,
+    "avoidance": 99,
+    "difficulty": 99,
+    "action": "eocs",
+    "eocs": [ "EOC_SCP_087_SEAM" ],
+    "always_invisible": true,
+    "benign": false,
+    "flags": [ "UNDODGEABLE", "AVATAR_ONLY" ]
+  },
+  {
+    "//": "THE DOORWAY TRAP.  Sits on t_scp_087_door_o - the OPEN variant of the closet door - and fires EOC_SCP_087_DOORWAY, the 'you pull the door open and there is nothing inside, and then a child is crying' beat.",
+    "//2": "WHY A TRAP RATHER THAN SOMETHING TIDIER: there is no engine event for 'a door was opened'.  event.h has no door event at all, map::open_door exposes no data hook of its own, and the only hazard it consults is the player's schizophrenia symptoms - so an 'on open' trigger simply does not exist to hook.  What DOES exist is fire-on-entry for a creature walking onto a tile, which is the very next thing the player does: open the door, then step through it.  So the beat rides the open doorway tile instead, one step after the handle turns.",
+    "//3": "The trap is therefore a TRIGGER, not a hazard: it is invisible, it cannot be dodged or disarmed, and it does nothing to whatever triggers it.  'always_invisible': true is the mechanism that hides it (trap::can_see returns false on that flag alone - src/trap.cpp:311-313), and 'visibility' is 99 rather than -1 because a NEGATIVE visibility is inverted: can_see would then read `visibility < 0` as ALWAYS SEEN (src/trap.cpp:314) and detect_trap would auto-succeed (src/trap.cpp:301).",
+    "//4": "AVATAR_ONLY IS LOAD-BEARING, for the same reason it is on the seam: map::maybe_trigger_trap only filters null, benign and AVATAR_ONLY traps (src/map.cpp:11318-11348), and trapfunc::eocs then runs the EOC with the TRIGGERING CREATURE as alpha (src/trapfunc.cpp:504).  Without the flag, an NPC companion or SCP-087-1 walking through the doorway would fire the player's reveal - and would be the 'u_' the EOC acts on.  UNDODGEABLE states that the doorway cannot be stepped around, instead of relying on the arithmetic of avoidance 99.",
+    "//5": "RE-ARMS EVERY VISIT: t_scp_087_door_o carries this as a BUILT-IN terrain trap, which map::tr_at resolves from the terrain itself (src/map.cpp:7065-7068); the here.remove_trap that trapfunc::eocs calls afterwards (src/trapfunc.cpp:508) only clears the SUBMAP trap field (src/map.cpp:7185-7196) and is therefore a no-op here.  So the beat is available again on a later descent - it is EOC_SCP_087_DOORWAY's own scp_087_doorway_seen flag that keeps it to once per visit, not the trap.",
+    "type": "trap",
+    "id": "tr_scp_087_doorway",
+    "name": "doorway",
+    "color": "light_gray",
+    "symbol": ".",
+    "visibility": 99,
+    "avoidance": 99,
+    "difficulty": 99,
+    "action": "eocs",
+    "eocs": [ "EOC_SCP_087_DOORWAY" ],
+    "always_invisible": true,
+    "benign": false,
+    "flags": [ "UNDODGEABLE", "AVATAR_ONLY" ]
+  }
+]

@@ -1,0 +1,17 @@
+[
+  {
+    "type": "SPECIES",
+    "id": "SCP",
+    "description": "an anomaly contained by the SCP Foundation",
+    "//": "No fear triggers and no bleed field: anomalies do not behave like animals, and SCP-173 is animate concrete.",
+    "flags": [  ]
+  },
+  {
+    "type": "SPECIES",
+    "id": "SCP_087",
+    "copy-from": "SCP",
+    "description": "the thing that follows you down the stairwell",
+    "//": "A NARROWING species, layered ON TOP of SCP (a monster may list several).  Why it exists: SCP-173 and SCP-087-1 both carried only [ \"SCP\" ], so an EOC gated on { \"u_has_species\": \"SCP\" } could not tell them apart - and EOC_SCP_087_1_DAMAGE (the 087-1 invulnerability-and-stagger) therefore fired on SCP-173 too.  A dedicated child species lets 087-1-specific effects target 087-1 alone while both monsters still share the broad SCP family.  Must be defined here: mtype loading runs MonsterGenerator::validate_species_ids (src/monstergenerator.cpp:726, called from :372), which debugmsg()s on an unknown species.  (An earlier version of this comment cited :1412 - that line number was wrong; B7.)  Species support copy-from like every other factory type, which is what the line above relies on.",
+    "flags": [  ]
+  }
+]

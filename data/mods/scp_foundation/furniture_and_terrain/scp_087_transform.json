@@ -1,0 +1,26 @@
+[
+  {
+    "//": "POINT-OF-NO-RETURN TRANSFORM (loop 5).  Turns t_scp_087_stairs_up into t_scp_087_stairs_none - the variant with NO GOES_UP flag, so pressing 'ascend' does nothing at all.",
+    "//2": "This is the honest CDDA way to represent 'the way back is gone': ordinary stairs cannot lie, so the disappearance has to be real terrain.  The player can still SEE the stairs; they just no longer lead anywhere.",
+    "//3": "RADIUS NOTE: u_transform_radius only affects the player's CURRENT z-level (map::transform_radius -> points_in_radius(loc, radi, 0), src/map.cpp:5387-5398 - the z-radius is hard-coded to 0).  That is sufficient here: the shaft's only exit to the surface is z-1's '<' tile, and to ascend at all the player must STAND ON a GOES_UP tile (game::find_stairs, src/game.cpp:9977).  Sealing z-1 seals the shaft.  The radius is kept small so the transform stays inside the reality bubble and takes the fast path in src/npctalk.cpp:4702-4707.",
+    "type": "ter_furn_transform",
+    "id": "scp_087_remove_exit",
+    "terrain": [ { "result": "t_scp_087_stairs_none", "valid_terrain": [ "t_scp_087_stairs_up" ] } ]
+  },
+  {
+    "//": "RESTORE TRANSFORM (loop 13, at ejection).  Turns t_scp_087_stairs_none back into t_scp_087_stairs_up.",
+    "//2": "WHY THIS EXISTS: the terrain change from scp_087_remove_exit PERSISTS in the map's submaps - mapgen does not re-run on a later visit.  Since ejection resets the loop counter (see EOC_SCP_087_EJECT), a second descent must begin in the reversible state, so the exit has to be put back.  Without this, a second visit would find the up-stairs permanently dead and the reversible phase would be broken from the first step.",
+    "//3": "Like the remove transform, this only touches the player's current z-level - so EOC_SCP_087_EJECT points it at z-1 via target_var (the transform honours target_var, src/npctalk.cpp:4686-4688) rather than relying on where the player is standing when the ejection fires.",
+    "type": "ter_furn_transform",
+    "id": "scp_087_restore_exit",
+    "terrain": [ { "result": "t_scp_087_stairs_up", "valid_terrain": [ "t_scp_087_stairs_none" ] } ]
+  },
+  {
+    "//": "FORCE THE DOOR OPEN (loop 13, at ejection).  Turns t_scp_087_door into t_scp_087_door_o - nothing else matches, so it cannot touch the walls or floor around it.",
+    "//2": "WHY: EOC_SCP_087_EJECT narrates 'The door is open behind you and it is light', but until now nothing made that true - the door was open only if the player happened to have left it that way, and a player who shut it before descending was told about an open door that was closed.  The playtest that prompted this had them close it two turns after the ejection, which is exactly the case the line gets wrong.  Rather than weaken the prose, the ejection now opens the door: the stairwell does not put you down gently, it puts you out.",
+    "//3": "AIM: the transform acts on the player's CURRENT z (map::transform_radius is hard-coded to a 0 z-radius, src/map.cpp:5387-5398), and this runs AFTER the teleport to the surface, so the player - and therefore the transform - is on z0 where the door is.  The target comes from scp_087_surface (the shaft mouth, (11,2) on z0) offset by x +1, y +20, which is the doorway cell (12,22) in mapgen/scp_087_mapgen.json.  Radius 1 so a no-match run cannot wander; the transform's own valid_terrain filter is the real guard.",
+    "type": "ter_furn_transform",
+    "id": "scp_087_open_door",
+    "terrain": [ { "result": "t_scp_087_door_o", "valid_terrain": [ "t_scp_087_door" ] } ]
+  }
+]

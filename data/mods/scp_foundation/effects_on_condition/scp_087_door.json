@@ -1,0 +1,89 @@
+[
+  {
+    "//": "SCP-087'S TWO DOOR BEATS.  Both of these are pure atmosphere - nothing here damages, drains, or otherwise touches the player.  They exist so the anomaly announces itself before you are even inside, which is the whole fantasy of the stairwell: it knew you were coming.",
+    "//2": "BEAT 1 (this EOC): the knock, heard as you walk up to the door.  BEAT 2 (EOC_SCP_087_DOORWAY below): the cry, heard as you step through it.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_087_DOOR_KNOCK",
+    "eoc_type": "EVENT",
+    "required_event": "avatar_enters_omt",
+    "//3": "WHY avatar_enters_omt IS THE RIGHT HOOK: the closet is a sealed 24x24 overmap tile whose only opening is the doorway, and mapgen/scp_087_mapgen.json puts a passable concrete apron on the tile's boundary row (12,23) with the door one row inside at (12,22).  Stepping onto that apron is therefore an OMT TRANSITION, so this event fires at the exact moment the player reaches the door - before opening it.  The companion refusal in scp_087_companion.json listens on the same event and OMT for its own reasons; the two are independent and simply both fire.",
+    "//4": "GATED TWICE: on oter_id being this special's surface tile (otherwise this fires on every overmap transition in the world), and on scp_087_knock_heard, so that walking in and out of the closet during the reversible phase does not repeat the line.",
+    "//5": "THE ELSE BRANCH IS THE 'YOU WENT AWAY' RESET.  Once-per-visit needs a way to know a visit ended, and the only other candidate - the loop-13 ejection - happens long after a player who simply walks out during the reversible phase has left.  So: an above-ground transition into any OTHER overmap tile clears the door flags, which means the knock and the cry greet you again the next time you come back to the building.  The 'above ground' half keeps a DESCENT from counting as leaving - dropping to z-1 changes the overmap tile too (z is part of the coordinate), and without that test every step down would re-arm the beats and you would hear the knocking every time you surfaced.  The ejection resets them as well, which covers a visit that ends while you are still down there.",
+    "//6": "NOT AN APPROACH: scp_087_just_ejected, SET BY EOC_SCP_087_EJECT IMMEDIATELY BEFORE ITS TELEPORT.  The first playtest showed why this is needed - the ejection into z0 is an OMT transition, so it fired this EOC and the knock landed one line after 'You are standing in the closet'.  It read well, but it was not what the beat claims to be: nothing was being approached, the stairwell had just thrown the player out.  The flag is set before the teleport so it is already in place when this EOC runs from the transition the teleport causes; this EOC consumes it.  On the ejection branch scp_087_approach stays 0, which is also what stops the doorway cry firing as the player walks back out (see below).",
+    "//7": "scp_087_approach IS THE ENTRY DIRECTION, and it is what makes the doorway cry entry-only.  A tile trap cannot tell which way a player crossed it, so direction is inferred from the arrival instead: a genuine arrival from outside arms this flag, and the doorway consumes it.  Crossing outward therefore cannot fire, and neither can a second crossing inward in the same visit.",
+    "condition": { "math": [ "u_val('pos_z') >= 0" ] },
+    "effect": [
+      {
+        "if": { "compare_string": [ "scp_087_z0", { "context_val": "oter_id" } ] },
+        "then": [
+          {
+            "if": { "math": [ "scp_087_just_ejected == 1" ] },
+            "then": [
+              {
+                "//": "Thrown out of the stairwell, not an approach (see scp_087_seam.json).  Consume the flag and leave the doorway gate disarmed, so walking back out of the door is silent.",
+                "math": [ "scp_087_just_ejected = 0" ]
+              },
+              { "math": [ "scp_087_approach = 0" ] }
+            ],
+            "else": [
+              { "//": "A genuine arrival at the building from outside: arm the doorway beat.", "math": [ "scp_087_approach = 1" ] },
+              {
+                "if": { "math": [ "scp_087_knock_heard == 0" ] },
+                "then": [
+                  {
+                    "if": { "math": [ "scp_087_archive == 1" ] },
+                    "then": [ { "u_message": "scp_087_knock_again", "snippet": true, "type": "info" } ],
+                    "else": [ { "u_message": "scp_087_knock", "snippet": true, "type": "info" } ]
+                  },
+                  {
+                    "//": "THE AUDIO CUE.  sound_effect is the real audio hook (src/npctalk.cpp:5739 -> sfx::play_variant_sound, src/sdlsound.cpp:688): it plays a soundpack file, is heard only by the player, and creates NO world sound, so it can never attract monsters.  An id the soundpack does not define is skipped silently (src/sdlsound.cpp:704-708), so this is safe with no soundpack installed and starts working the moment one defines scp_087_knock.  The id is deliberately custom: the engine's own sfx vocabulary has nothing knocking-shaped, and a wrong-sounding stock cue would be worse than silence.",
+                    "sound_effect": "default",
+                    "id": "scp_087_knock",
+                    "volume": 60
+                  },
+                  { "math": [ "scp_087_knock_heard = 1" ] }
+                ]
+              }
+            ]
+          }
+        ],
+        "else": [
+          {
+            "//": "Left the special entirely - re-arm every door beat for the next approach, and clear the arrival flag so a stale one cannot suppress a future knock.",
+            "if": { "math": [ "scp_087_knock_heard + scp_087_doorway_seen + scp_087_approach + scp_087_just_ejected > 0" ] },
+            "then": [
+              { "math": [ "scp_087_knock_heard = 0" ] },
+              { "math": [ "scp_087_doorway_seen = 0" ] },
+              { "math": [ "scp_087_approach = 0" ] },
+              { "math": [ "scp_087_just_ejected = 0" ] }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "//": "BEAT 2: THE CRY, on stepping through the open doorway.  Run by tr_scp_087_doorway, the invisible trigger trap that t_scp_087_door_o carries - the trap's own comment explains why the trigger is the open doorway tile rather than the act of opening (there is no engine event for a door being opened).",
+    "//2": "CONDITION, three parts: u_is_avatar is belt-and-braces (the trap is already AVATAR_ONLY, so an NPC or SCP-087-1 in the doorway cannot reach this), scp_087_doorway_seen keeps the reveal to once per visit (the trap itself re-arms forever, because a terrain's built-in trap survives trapfunc::eocs's remove_trap), and scp_087_approach makes it ENTRY-ONLY.",
+    "//2b": "WHY THE APPROACH GATE EXISTS (playtest fix): the trap fires on anyone entering the doorway tile, in either direction, because that is all a tile trap can see.  In the first playtest the cry fired on the way OUT - the player had just been ejected, walked back through the door to leave, and heard 'the crying starts' from a room they were quitting.  There is no direction in the trap's dialogue, so the direction is taken from the ARRIVAL instead: EOC_SCP_087_DOOR_KNOCK arms scp_087_approach when the player genuinely arrives at the building from outside, and this EOC consumes it.  Crossing outward leaves it 0, so nothing fires; a second crossing inward in the same visit finds both flags already spent.",
+    "//3": "NOTHING MECHANICAL HAPPENS HERE by design: no damage, no effect, no morale, no sound in the world.  The stairwell is not lethal; this is the moment it acknowledges you.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_087_DOORWAY",
+    "condition": { "and": [ "u_is_avatar", { "math": [ "scp_087_doorway_seen == 0" ] }, { "math": [ "scp_087_approach == 1" ] } ] },
+    "effect": [
+      {
+        "if": { "math": [ "scp_087_archive == 1" ] },
+        "then": [ { "u_message": "scp_087_doorway_cry_again", "snippet": true, "type": "bad" } ],
+        "else": [ { "u_message": "scp_087_doorway_cry", "snippet": true, "type": "bad" } ]
+      },
+      {
+        "//": "See EOC_SCP_087_DOOR_KNOCK above for what sound_effect does and why the id is custom.  Silent until a soundpack defines scp_087_cry.",
+        "sound_effect": "default",
+        "id": "scp_087_cry",
+        "volume": 70
+      },
+      { "math": [ "scp_087_doorway_seen = 1" ] },
+      { "math": [ "scp_087_approach = 0" ] }
+    ]
+  }
+]

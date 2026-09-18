@@ -1,0 +1,103 @@
+[
+  {
+    "//": "PARANOIA DRIVER.  A RECURRING EOC (not avatar_moves - that fires per movement action and would reward standing still) that escalates the paranoia with the LOOP COUNTER and only while the player is actually on a shaft tile.",
+    "//2": "GATING is two-tier.  The CHEAP tier is the EOC-level 'condition' (scp_087_loops > 0 && u_val('pos_z') < 0): evaluated before the body (src/effect_on_condition.cpp:370), it keeps the whole per-tick body - including the u_location_variable capture below - from running at all for the ~entire game when the player is not below the surface in an active descent (L3).  The EXPENSIVE tier is the terrain check, which needs a captured location: u_location_variable writes the player's own position to the context var scp_087_here (an EFFECT, so it must live in the body), and the 'if' below then ORs the shaft terrains against it.",
+    "//3": "IMPORTANT - map_terrain_id matches ONE terrain id (src/condition.cpp:1734), so the gate ORs across every terrain the player can actually stand on in the shaft: t_scp_087_floor, t_scp_087_landing, t_scp_087_stairs_down, t_scp_087_stairs_up, t_scp_087_stairs_none and t_scp_087_seam.  Checking only the stairs-down tile would almost never match, since the player normally walks on floor.",
+    "//3b": "M2 FIX - 'BELOW THE SURFACE' FLOOR: the terrain OR alone is not sufficient, because z0 (the ordinary surface closet) is floored with the SAME t_scp_087_floor as the shaft (mapgen/scp_087_mapgen.json maps '.' to t_scp_087_floor on every level).  Without an extra condition the paranoia and the crying would fire while standing in the perfectly ordinary closet upstairs.  The shaft is z-1 through z-9 (overmap_special/scp_087_special.json) and the closet is z0, so adding u_val('pos_z') < 0 pins the effect to the shaft proper.  (In a global RECURRING EOC u_ is the avatar; the keeper EOC reads the same value at scp_087_1_pursuer.json:36.)",
+    "//4": "MORALE MATH: applied via u_add_morale with 'capped': true.  LOAD-BEARING: src/morale.cpp:200-204 shows that without capped, repeated bonuses stack by root-sum-of-squares (5,7.1,8.6,...) and would NEVER reach -30, let alone -99.  WITH capped:true (morale.cpp:195-199) they accumulate linearly (-5,-15,-30,...) exactly as designed, and normalize_bonus (morale.cpp:237-241) clamps the point at max_bonus.",
+    "//5": "The step grows with loops, and it is applied ONCE PER LOOP ADVANCE (N1) - so the total is a function of the loop counter alone.  There is no longer any dependence on how long the player lingers: the old form re-applied -5*loops every 120 turns with capped:true, which accumulates linearly with the APPLICATION COUNT too, so it pinned to the -99 floor in roughly 40 minutes at loops 1 and never recovered - the loop counter, which is the whole escape model, stopped mattering after the first half hour.  Hard-capped at -99 (src/character_health.cpp:551-556 pins focus to 1 below -99), so the shaft is never unwinnable.  The resulting ladder is -5, -15, -30, -50, -75, then the -99 floor from loop 6 on - which lines the pressure up with the reversible descent (loops 1-4 stay survivable) and the point of no return (loop 5 onward bites).",
+    "//6": "HALLUCINATIONS are layered here: a low-probability u_spawn_monster with hallucination_count spawns a hallucination copy of 087-1 that the player sees but cannot fight (EFFECT_ON_CONDITION.md:5544), so they can never be certain whether the shape behind them is real.  This is separate from EOC_SCP_087_1_SUMMON, which places the ONE real pursuer at loop 5.  This roll is NOT loop-gated - it stays on the 120-turn tick, which is deliberate: the uncertainty should keep happening while you stand still.",
+    "//7": "N1 FIX - WHY THE MORALE MOVED BEHIND A LOOP CHECK: scp_087_paranoia_at records the loop value the morale was last stepped for.  On a new loop the step is applied and the marker advances; on every other tick the branch is skipped.  The state variable is reset alongside the loop counter in EOC_SCP_087_EJECT so a later descent starts its ladder clean.  The effect intensity below was already loop-derived and is left on the plain tick, since re-applying the same intensity is idempotent.  KNOWN EDGE CASE: the 4-hour duration is only refreshed on a loop advance, so a player who parks in the shaft for more than four hours without descending would let the morale lapse until the next loop - implausible in practice (hunger and thirst bite long before that), and self-correcting.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_087_PARANOIA",
+    "eoc_type": "RECURRING",
+    "recurrence": 120,
+    "global": true,
+    "condition": { "and": [ { "math": [ "scp_087_loops > 0" ] }, { "math": [ "u_val('pos_z') < 0" ] } ] },
+    "effect": [
+      { "u_location_variable": { "context_val": "scp_087_here" } },
+      {
+        "if": {
+          "and": [
+            {
+              "or": [
+                { "map_terrain_id": "t_scp_087_floor", "loc": { "context_val": "scp_087_here" } },
+                { "map_terrain_id": "t_scp_087_landing", "loc": { "context_val": "scp_087_here" } },
+                { "map_terrain_id": "t_scp_087_stairs_down", "loc": { "context_val": "scp_087_here" } },
+                { "map_terrain_id": "t_scp_087_stairs_up", "loc": { "context_val": "scp_087_here" } },
+                { "map_terrain_id": "t_scp_087_stairs_none", "loc": { "context_val": "scp_087_here" } },
+                { "map_terrain_id": "t_scp_087_seam", "loc": { "context_val": "scp_087_here" } }
+              ]
+            }
+          ]
+        },
+        "then": [
+          {
+            "if": { "math": [ "scp_087_loops != scp_087_paranoia_at" ] },
+            "then": [
+              { "math": [ "scp_087_paranoia_at = scp_087_loops" ] },
+              {
+                "u_add_morale": "morale_scp_087_paranoia",
+                "bonus": { "math": [ "-5 * scp_087_loops" ] },
+                "max_bonus": -99,
+                "duration": "4 hours",
+                "capped": true
+              },
+              {
+                "//": "PLAYTEST FIX - THE EFFECT IS INSIDE THE GUARD TOO.  This block used to sit AFTER the 'if', i.e. outside the once-per-loop check, so it re-applied its duration on EVERY tick of this recurring EOC for as long as the player stood on shaft terrain.  Durations accumulate on re-application, so a 13-loop descent left an effect with 407,093 turns - 113 hours, or 4.7 in-game days (an earlier version of this comment said 47 days; that was a decimal slip) - of 'That sound' in the effects tab.  The effect is purely descriptive (no base_mods in scp_087_paranoia_effect.json, and nothing in the mod tests for it; the mechanical weight is the morale point above), so nothing in play was broken by it, but it was not what the design said.",
+                "//2": "MEASURED AFTER MOVING IT INSIDE THE GUARD (second end-to-end playtest, same 13 loops): 191,868 turns = ~53 hours = 13 x 4 hours, ie exactly one application per loop advance.  That confirmed the fix but was still not 'a few hours', because the duration multiplies by the number of loops whatever it is set to.",
+                "//3": "DURATION SHORTENED TO 10 MINUTES (third pass, deliberate tuning).  A loop takes roughly 4 minutes of game time, so 10 minutes keeps the status continuously present for the whole descent while the post-descent stack drops from ~47 hours to ~2.  Total after a completed run is therefore ~2 h of accumulation plus the ejection's own 6 h in scp_087_seam.json, so ~8 h - the 'a few hours' the design always claimed.  The escalating min(99, 3 * loops) intensity is untouched: this is a duration change only, and the effect has nothing mechanical to rebalance.  The one trade-off is that on a long linger it can lapse and re-appear at the next loop; raise this to 30 minutes if you would rather it never blinks (total ~13 h).",
+                "u_add_effect": "scp_087_paranoia",
+                "duration": "10 minutes",
+                "intensity": { "math": [ "min(99, 3 * scp_087_loops)" ] }
+              }
+            ]
+          },
+          {
+            "if": { "math": [ "rand(100) < (8 + 2 * scp_087_loops)" ] },
+            "then": [
+              {
+                "u_spawn_monster": "mon_scp_087_1",
+                "hallucination_count": 1,
+                "min_radius": 2,
+                "max_radius": 6,
+                "spawn_message": "There is a shape behind you on the stair, and then there is not."
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "//": "CRYING - the recurring narrative cue.  Deliberately u_message narration, never positional sound: CDDA sound attenuation makes a 'sound 200m below' silently drop (src/sounds.cpp:256-273 gives ~970 tiles of effective attenuation at 10 z, and sub-threshold sounds are skipped at sounds.cpp:627), and a loud enough sound would summon hordes.  So the cry is prose, delivered only on a shaft tile, and never placed on the map - unfalsifiable.",
+    "//2": "Same two-tier gate as the paranoia driver: a CHEAP EOC-level 'condition' (scp_087_loops > 0 && u_val('pos_z') < 0, evaluated before the body, src/effect_on_condition.cpp:370) so the body and its u_location_variable capture do not run while the player is not below the surface, then the EXPENSIVE OR-across-shaft-terrains check against the captured position (map_terrain_id matches one id at a time).",
+    "//3": "WHAT 'sound': true ACTUALLY DOES (B7).  It is NOT a sound event: f_message uses the flag purely as a DISPLAY GATE - it suppresses the line when the target is asleep or deaf, and (when outdoor_only is also set) rolls a depth-versus-hearing chance (src/npctalk.cpp:5602-5615).  Nothing is added to the world, so the cry still cannot attract hordes and is still never placed on the map.  The only side effect is that a deaf player never hears the crying, which is the correct behaviour for a line that claims to be heard.  The 'prose, never positional sound' reasoning above therefore still holds - but for this reason, not because a real sound would have been too loud.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_087_CRY",
+    "eoc_type": "RECURRING",
+    "recurrence": 300,
+    "global": true,
+    "condition": { "and": [ { "math": [ "scp_087_loops > 0" ] }, { "math": [ "u_val('pos_z') < 0" ] } ] },
+    "effect": [
+      { "u_location_variable": { "context_val": "scp_087_here" } },
+      {
+        "if": {
+          "and": [
+            {
+              "or": [
+                { "map_terrain_id": "t_scp_087_floor", "loc": { "context_val": "scp_087_here" } },
+                { "map_terrain_id": "t_scp_087_landing", "loc": { "context_val": "scp_087_here" } },
+                { "map_terrain_id": "t_scp_087_stairs_down", "loc": { "context_val": "scp_087_here" } },
+                { "map_terrain_id": "t_scp_087_stairs_up", "loc": { "context_val": "scp_087_here" } },
+                { "map_terrain_id": "t_scp_087_stairs_none", "loc": { "context_val": "scp_087_here" } },
+                { "map_terrain_id": "t_scp_087_seam", "loc": { "context_val": "scp_087_here" } }
+              ]
+            }
+          ]
+        },
+        "then": [ { "u_message": "scp_087_cry", "snippet": true, "type": "info", "sound": true } ]
+      }
+    ]
+  }
+]

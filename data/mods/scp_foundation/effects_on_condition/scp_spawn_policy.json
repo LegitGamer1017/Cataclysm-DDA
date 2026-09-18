@@ -1,0 +1,52 @@
+[
+  {
+    "//": "SPAWN POLICY, PART 1 of 2: the 'primary' marker effect.  Exactly one live SCP-173 should carry this at a time.  The sweep below grants it to the first instance it finds and retires every other instance that lacks it.  This is what enforces 'only one SCP-173 in the world' - CDDA has no unique_id for monsters (src/game.h:1187 is NPC-only), so the invariant has to be maintained rather than declared.",
+    "type": "effect_type",
+    "id": "scp_173_primary",
+    "name": [ "SCP-173" ],
+    "desc": [ "This is the original.  The others are not." ],
+    "show_in_info": false,
+    "rating": "neutral"
+  },
+  {
+    "//": "SPAWN POLICY, PART 2 of 2: the quota sweep.  Runs every 10 minutes, world-scoped.  It resets a claim counter and then dispatches a per-monster EOC to every SCP-173 in range.  Monster ids are matched with mtype_ids, and 'global': true keeps the claim counter visible across the whole sweep.  TO POLICE A NEW SCP: copy these two EOCs with the new id and change the mtype_ids entry.  Nothing else needs editing.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_173_QUOTA_SWEEP",
+    "eoc_type": "RECURRING",
+    "recurrence": 600,
+    "global": true,
+    "effect": [
+      { "//": "No instance has claimed primary status yet this sweep.", "math": [ "scp_173_claimed = 0" ] },
+      {
+        "u_run_monster_eocs": [ "EOC_SCP_173_QUOTA_SWEEP_ONE" ],
+        "mtype_ids": [ "mon_scp_173" ],
+        "monster_range": 240
+      }
+    ]
+  },
+  {
+    "//": "Runs once per nearby SCP-173 (alpha is that monster).  The first claimant becomes the primary and keeps its marker.  Any other instance is retired - but only when the player cannot see it, so a duplicate never winks out of existence in front of the player.  Quota is hardcoded to 1 here; for a pair SCP, use two markers instead.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_173_QUOTA_SWEEP_ONE",
+    "effect": [
+      {
+        "if": { "math": [ "scp_173_claimed == 0" ] },
+        "then": [
+          {
+            "//": "This one is the primary.  Claim it and stop counting.",
+            "u_add_effect": "scp_173_primary",
+            "duration": "PERMANENT"
+          },
+          { "math": [ "scp_173_claimed = 1" ] }
+        ],
+        "else": [
+          {
+            "//": "Over quota.  Only retire if unobserved - a pop would break the fiction.",
+            "if": { "not": "player_see_u" },
+            "then": [ { "u_die": { "remove_corpse": true, "supress_message": true } } ]
+          }
+        ]
+      }
+    ]
+  }
+]

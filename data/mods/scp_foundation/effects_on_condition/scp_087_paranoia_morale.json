@@ -1,0 +1,8 @@
+[
+  {
+    "//": "SCP-087 PARANOIA - THE MORALE TYPE.  The text shown in the morale panel near the mood number.  The actual applied bonus lives in the EOCs (u_add_morale with 'capped': true).",
+    "type": "morale_type",
+    "id": "morale_scp_087_paranoia",
+    "text": "The stairwell"
+  }
+]

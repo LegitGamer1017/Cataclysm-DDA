@@ -1,0 +1,12 @@
+[
+  {
+    "type": "MOD_INFO",
+    "id": "scp_foundation",
+    "name": "SCP Foundation",
+    "authors": [ "Xiong" ],
+    "description": "Adds anomalies of the SCP Foundation to the Cataclysm.  Containment failed long before the Cataclysm - the things in the boxes are still in the boxes, and the boxes are still locked.\n\nBegins with SCP-173, The Sculpture: animate concrete that cannot move while observed, and cannot be harmed while observed either.  Blink and it is already at your throat.  You do not kill it.  You leave.\n\nNow joined by SCP-087, the Stairwell: a disguised janitorial closet opening onto a concrete staircase with no lights, no endpoint, and a crying somewhere far below that you can never reach.  Thirteen loops down and the stairs decide they are done with you.  The face in the dark stays in the dark.  You were never going to find the bottom.  It was never looking for you to find it.",
+    "category": "creatures",
+    "dependencies": [ "dda" ],
+    "version": "0.2"
+  }
+]

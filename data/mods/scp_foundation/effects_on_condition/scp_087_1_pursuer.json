@@ -1,0 +1,119 @@
+[
+  {
+    "//": "SCP-087-1 PURSUER - PART 1: THE SUMMON.  Called once at loop 5 from EOC_SCP_087_PHASE5.  This is the REAL spawn (the paranoia driver only ever spawns hallucination copies).  It places exactly one mon_scp_087_1 near the player and arms the keeper.",
+    "//2": "Guarded on scp_087_1_active so re-entry to loop 5 in a later run cannot stack a second pursuer.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_087_1_SUMMON",
+    "effect": [
+      {
+        "if": { "math": [ "scp_087_1_active == 0" ] },
+        "then": [
+          {
+            "u_spawn_monster": "mon_scp_087_1",
+            "real_count": 1,
+            "min_radius": 6,
+            "max_radius": 14,
+            "spawn_message": "Something shuffles on the flight below you.  It does not have a face, and it is closer than it should be."
+          },
+          { "math": [ "scp_087_1_active = 1" ] }
+        ]
+      }
+    ]
+  },
+  {
+    "//": "SCP-087-1 PURSUER - PART 2: THE KEEPER.  Runs on the avatar every 10 seconds while the pursuer is armed and the player is on a shaft tile.",
+    "//2": "It does three things:",
+    "//3": "  (a) records the player's current location into the global 'scp_087_1_anchor' and the player's z into 'scp_087_1_pz', so the per-monster FOLLOW EOC can find them;",
+    "//4": "  (b) tracks IDLE: scp_087_1_idle counts keeper ticks since the loop counter last changed, and ONLY a completed loop resets it - walking, standing still, fighting and hiding all leave it climbing.  The contact payload also resets it now, so being caught buys a fresh window.  See (c) and EOC_SCP_087_1_FOLLOW's //3;",
+    "//5": "  (c) dispatches EOC_SCP_087_1_FOLLOW to every mon_scp_087_1 in the reality bubble, filtered with z_min/z_max to the player's own z so it always operates on the right level (EFFECT_ON_CONDITION.md:2678-2681).",
+    "//6": "L3 GATE: the EOC-level 'condition' is evaluated BEFORE the effect body (src/effect_on_condition.cpp:370), so gating on scp_087_1_active == 1 here means that for the entire game outside the loop-5 encounter - the overwhelmingly common case - the body never runs at all: no u_location_variable capture, no idle math, no monster dispatch, every 10 seconds.  Previously the active check sat INSIDE the body as an 'if', so the anchor/location work happened unconditionally forever.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_087_1_KEEPER",
+    "eoc_type": "RECURRING",
+    "recurrence": 10,
+    "global": true,
+    "condition": { "math": [ "scp_087_1_active == 1" ] },
+    "effect": [
+      { "u_location_variable": { "global_val": "scp_087_1_anchor" } },
+      { "math": [ "scp_087_1_pz = u_val('pos_z')" ] },
+      {
+        "if": { "math": [ "scp_087_loops != scp_087_1_lastloop" ] },
+        "then": [ { "math": [ "scp_087_1_lastloop = scp_087_loops" ] }, { "math": [ "scp_087_1_idle = 0" ] } ],
+        "else": [ { "math": [ "scp_087_1_idle += 1" ] } ]
+      },
+      {
+        "u_run_monster_eocs": [ "EOC_SCP_087_1_FOLLOW" ],
+        "mtype_ids": [ "mon_scp_087_1" ],
+        "monster_range": 240,
+        "z_min": { "math": [ "u_val('pos_z')" ] },
+        "z_max": { "math": [ "u_val('pos_z')" ] }
+      },
+      {
+        "//": "CONFINEMENT SAFETY, dispatched with NO z filter (z_min/z_max spanning every level) so an escaped 087-1 is caught wherever it went, not just on the player's level.  See EOC_SCP_087_1_CONFINE.",
+        "u_run_monster_eocs": [ "EOC_SCP_087_1_CONFINE" ],
+        "mtype_ids": [ "mon_scp_087_1" ],
+        "monster_range": 240,
+        "z_min": -10,
+        "z_max": 10
+      }
+    ]
+  },
+  {
+    "//": "SCP-087-1 PURSUER - PART 3: THE FOLLOW (runs once per 087-1; alpha IS the monster, so u_ is 087-1).",
+    "//2": "THE Z-ANCHOR: this is the piece the plan called 'z-check mandatory'.  If the monster is NOT on the player's z (u_val('pos_z') vs the recorded scp_087_1_pz), it is teleported to the player's anchor location - so it can never be left behind a level when the player descends.",
+    "//3": "THE GRACE WINDOW, AND WHAT IT ACTUALLY COUNTS (corrected during playtest): scp_087_1_idle counts KEEPER TICKS SINCE THE LOOP COUNTER LAST CHANGED - only a completed descent resets it.  Walking, standing still, fighting and hiding all leave it climbing.  So the window is really 'time since the last loop', not 'time since the player stopped'.  That matters because a descent takes minutes: idle passes the threshold partway down and stays past it, so the monster is placed on the player's own tile repeatedly while they walk.  Those repeated placements are where the chained knockdowns came from; the contact payload in monster_attacks/scp_087_1_attacks.json now resets this counter every time it lands, which restarts the window.  THE THRESHOLD ITSELF WAS RAISED from 3 ticks (30 seconds) to 18 (about 3 minutes) in the playtest pass - not for difficulty but for exposure, so that it reads as a rare sighting rather than a companion; see the inline note on the condition below.  Below the threshold the monster is left to the native KEEP_DISTANCE trailing (it paces you, never closing); at or above it, it is teleported to the player's anchor, ie it closes.",
+    "//3b": "N2 - THE APPROACH DOES NOT STICK, AND THAT IS INTENDED.  Do not 'fix' the retreat.  KEEP_DISTANCE makes the monster back off again on its very next turn: monster::attitude() returns MATT_FLEE whenever its distance to the destination is INSIDE tracking_distance (src/monster.cpp:1916-1919: `if( has_flag( mon_flag_KEEP_DISTANCE ) && rl_dist( pos_abs(), get_dest() ) < type->tracking_distance ) return MATT_FLEE;`), and monster::move() holds position and returns early when it is within tracking_distance and not already fleeing (src/monmove.cpp:1143-1151).  With tracking_distance 4, the teleport above is therefore followed by a retreat back out to about 4 tiles.  What makes the beat work is ORDER: monster::move() runs the special-attack loop (src/monmove.cpp:1022-1054) BEFORE that movement early-return, so on the turn it arrives it is still inside contact range and the close attack fires - which is exactly the reach the range:2 gate in monster_attacks/scp_087_1_attacks.json //4 was set to catch.  The net feel is 'it arrives, and then it is gone again', which is what the README means by it pacing you and never being caught; the comment that used to sit here implied the monster stayed closed, which it never did.",
+    "//4": "Threshold RAISED to 18 ticks x 10s recurrence = ~3 minutes (it was 3 ticks / 30 seconds) - see the inline note on the condition below for the reasoning, which is about how often the anomaly is SEEN rather than about difficulty.  As before it counts descent since the last completed loop, NOT time spent standing still (see //3; the counter is reset by a completed loop or by a contact, never by movement).  It remains the knob for how often it can close.  To make the approach linger instead of retreating you would have to lower tracking_distance, but note the floor is 3 (src/monstergenerator.cpp:904-905 enforces a minimum of 3; the default when omitted is 8, not the 3 that doc/JSON/MONSTERS.md:135 claims).",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_087_1_FOLLOW",
+    "effect": [
+      {
+        "if": { "math": [ "u_val('pos_z') != scp_087_1_pz" ] },
+        "then": [ { "u_teleport": { "global_val": "scp_087_1_anchor" }, "force_safe": true } ],
+        "else": [
+          {
+            "//": "GRACE WINDOW: 18 keeper ticks x the 10-second recurrence = ~3 minutes.  RAISED FROM 3 (30 seconds) at the owner's direction after the second end-to-end run, where it closed on the player about once a loop and landed four catches in one descent.  The reasoning is exposure, not difficulty: SCP-087 should be a rare sighting that stops your breath, and a pursuer you see every thirty seconds becomes furniture.  Three minutes is roughly the time it takes to walk one loop, so it now appears at most about once per loop, and sometimes not at all.  Contact resets this counter (see EOC_SCP_087_1_CLOSE), so being caught also buys a fresh window.  THE KNOB IS HERE AND NOWHERE ELSE: one unit is 10 seconds, so 12 = 2 min, 18 = 3 min, 24 = 4 min.",
+            "if": { "math": [ "scp_087_1_idle >= 18" ] },
+            "then": [ { "u_teleport": { "global_val": "scp_087_1_anchor" }, "force_safe": true } ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "//": "SCP-087-1 PURSUER - PART 4: CONFINEMENT SAFETY NET.  Runs once per 087-1, on EVERY z-level (dispatched with z_min -10 / z_max 10), so it catches an escaped instance wherever it went.",
+    "//2": "The primary confinement is structural: t_scp_087_threshold at the shaft mouth carries MON_AVOID_STRICT, which src/monmove.cpp:172-174 enforces inside the monster movement path, so 087-1 cannot path out even with the door open.  This EOC is the belt-and-braces net for the cases terrain cannot cover - chiefly a debug teleport or any other effect that drops the monster somewhere it should never be.",
+    "//3": "The shaft occupies z 0 through z-9.  Anything ABOVE z0 has left the stairwell, so it is retired silently (the same u_die-from-an-EOC pattern SCP-173 uses to retire duplicate primaries - u_die handles monsters, src/npctalk.cpp:5945-5948).  remove_corpse + supress_message so no corpse and no death spam appear on the surface.",
+    "//4": "u_ is the monster here, so u_val('pos_z') is 087-1's own z.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_087_1_CONFINE",
+    "effect": [
+      {
+        "if": { "math": [ "u_val('pos_z') > 0" ] },
+        "then": [ { "u_die": { "remove_corpse": true, "supress_message": true } } ]
+      }
+    ]
+  },
+  {
+    "//": "SCP-087-1 PURSUER - PART 5: RETIREMENT ON EJECTION.  Called from EOC_SCP_087_EJECT just before the loop counter resets.",
+    "//2": "WHY: ejection resets scp_087_1_active so a later descent can summon a fresh pursuer.  But a monster that was left behind still exists - monsters that leave the reality bubble are stored in the submap's spawn list (src/submap.h:316), not destroyed.  Without this step, the next loop-5 summon would add a SECOND 087-1 beside the dormant first, and the player could meet two.",
+    "//3": "So the sweep retires every mon_scp_087_1 across all z-levels (no z filter) BEFORE the archive reset - the same u_die pattern the confinement net uses.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_087_1_RETIRE",
+    "effect": [
+      {
+        "u_run_monster_eocs": [ "EOC_SCP_087_1_RETIRE_ONE" ],
+        "mtype_ids": [ "mon_scp_087_1" ],
+        "monster_range": 240,
+        "z_min": -10,
+        "z_max": 10
+      }
+    ]
+  },
+  {
+    "//": "Runs once per 087-1 (alpha IS the monster).  Silent, corpse-less removal.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_087_1_RETIRE_ONE",
+    "effect": [ { "u_die": { "remove_corpse": true, "supress_message": true } } ]
+  }
+]

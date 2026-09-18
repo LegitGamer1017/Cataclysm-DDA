@@ -1,0 +1,13 @@
+[
+  {
+    "//": "THE SCP REGISTRY.  The canonical list of every SCP in this mod.  Adding a new SCP means adding one line here.  The quota sweep in scp_spawn_policy.json currently matches ids through mtype_ids rather than iterating this group, so this file serves as the single authoritative index - keep the two in step.",
+    "//2": "NOTE ON SCP-087-1: it is registered here (the canonical index) but is deliberately NOT added to any natural world-spawn group in scp_spawns.json.  It does not spawn in the wild - it appears only inside the shaft, summoned by the loop-5 encounter logic (EOC_SCP_087_1_CLOSE's summoning counterpart).  weight 1 here merely makes it discoverable/debug-spawnable like SCP-173.",
+    "type": "monstergroup",
+    "id": "GROUP_SCP_ALL",
+    "default": "mon_null",
+    "monsters": [
+      { "monster": "mon_scp_173", "weight": 1, "cost_multiplier": 0 },
+      { "monster": "mon_scp_087_1", "weight": 1, "cost_multiplier": 0 }
+    ]
+  }
+]

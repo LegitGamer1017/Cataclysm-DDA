@@ -1,0 +1,87 @@
+[
+  {
+    "//": "SCP-087'S LOOT: THE DEAD OF THE STAIRWELL.  The Foundation sends people down and none of them come back up, so the stairs are littered with the gear of everyone who went before.  Nothing here was placed for the player - it is debris, which is why it can be picked clean or missed entirely.",
+    "//2": "WHY THERE IS NOTHING ON THE FLOOR: the design decision is that all loot is on the bodies.  A body and its kit are ONE placement: the corpse is the first entry of its kit group, so a single mapgen roll either produces a dead person and their things, or produces nothing at all.  Two independent rolls would sometimes leave a kit lying beside no body, which reads as a bug.",
+    "//3": "THE RNG IS TWO LAYERS, and that is what makes 'nothing, or a jackpot' real.  Layer one is the mapgen 'chance' on the body itself (45% per body, in mapgen/scp_087_mapgen.json - the additions at the end of that file).  Layer two is this file: every group is a COLLECTION (doc/JSON/ITEM_SPAWN.md:21-37), so each entry rolls independently with absolute odds, and a body can yield a light and some paper, or nothing but the clothes it died in.",
+    "//4": "FIELD-NAME TRAP, worth repeating because it fails silently: mapgen placement uses 'chance', item groups use 'prob'.  Swapping them yields no loot and no error.",
+    "//5": "WHAT IS DELIBERATELY NOT HERE: no military hardware.  The ceiling is one reliable light, some medical supplies, and - on the security escort, at 5% - a single long arm.  The anomaly must not become the best loot spot in the world, because that would spend the horror.",
+    "type": "item_group",
+    "subtype": "collection",
+    "id": "scp_087_kit_researcher",
+    "entries": [
+      { "item": "corpse" },
+      { "item": "flashlight", "prob": 70, "charges": [ 4, 25 ] },
+      { "item": "paper", "prob": 60, "count": [ 1, 4 ] },
+      { "item": "pen", "prob": 35 },
+      { "item": "bandages", "prob": 25, "count": [ 1, 2 ] }
+    ]
+  },
+  {
+    "//": "THE SECURITY ESCORT.  The only body that can carry a firearm, and the only jackpot in the mod.  The 5% sits on ONE roll that resolves to a complete package - never a bare gun, never loose ammunition for a weapon that is not there.",
+    "//2": "WHY ar15_223medium AND NOT modular_ar15: in this build the AR-15 item is a stripped lower receiver with ammo ['NULL'] (data/json/items/gun/223.json:3 - 'the difference will be made up for with integrated stats from the installable modular upper receivers'), so placing the item alone hands the player a project, not a rifle.  ar15_223medium is the base game's OWN assembled group (data/json/itemgroups/Weapons_Mods_Ammo/conversions/conversion_guns.json:33): it spawns the receiver with its .223 retool installed and loaded, so the find is a working rifle.",
+    "//3": "Ammunition ids verified: 223 (data/json/items/ammo/223.json:3), shot_00 (data/json/items/ammo/shot.json:169), stanag30 (data/json/items/magazine/223.json:225).  The shotgun branch needs no magazine at all.",
+    "//4": "THE AFTERMATH, and where it lives.  The magazine is NOT full: a few rounds left in it (the loaded-mag idiom is the base game's own, data/json/itemgroups/Weapons_Mods_Ammo/field_drops.json:11), loose rounds still on him where he was trying to reload, and spent 223_casing cases rolled in the KIT rather than inside the gun branch - because a man who fired a rifle fired it whether or not the rifle is still lying here.  Found with casings and no rifle, the body reads as a fight he lost, which is the point.  The casing id is real but not hand-declared anywhere: it is generated from the ammunition's own `\"casing\": \"223_casing\"` field (data/json/items/ammo/223.json:21) and used by the base game's casing groups (data/json/itemgroups/Weapons_Mods_Ammo/casings.json:57).",
+    "type": "item_group",
+    "subtype": "collection",
+    "id": "scp_087_kit_guard",
+    "entries": [
+      { "item": "corpse" },
+      {
+        "distribution": [
+          {
+            "collection": [ { "group": "ar15_223medium" }, { "item": "stanag30", "charges": [ 1, 4 ] }, { "item": "223", "count": [ 10, 30 ] } ]
+          },
+          { "collection": [ { "item": "mossberg_500" }, { "item": "shot_00", "count": [ 4, 12 ] } ] }
+        ],
+        "prob": 5
+      },
+      { "item": "223_casing", "prob": 45, "count": [ 3, 11 ] },
+      { "item": "bandages", "prob": 40 },
+      { "item": "heavy_flashlight", "prob": 30, "charges": [ 10, 60 ] }
+    ]
+  },
+  {
+    "//": "THE SUBJECT.  Almost nothing, on purpose: this is the 'you got nothing' body and the most affecting one.  A jumpsuit and an empty canteen - whoever this was came down here because they were told to, with nothing of their own.",
+    "type": "item_group",
+    "subtype": "collection",
+    "id": "scp_087_kit_subject",
+    "entries": [ { "item": "corpse" }, { "item": "jumpsuit", "prob": 80 }, { "item": "canteen", "prob": 45 } ]
+  },
+  {
+    "//": "THE SCAVENGER - whoever found the door on their own and went in to see.  The most mundane kit of the four, and the one that says the most about how people die here: properly equipped for a day out, and never out again.",
+    "type": "item_group",
+    "subtype": "collection",
+    "id": "scp_087_kit_scavenger",
+    "entries": [
+      { "item": "corpse" },
+      { "item": "backpack", "prob": 45 },
+      { "item": "rope_30", "prob": 35 },
+      { "item": "roadmap", "prob": 30 },
+      { "item": "crackers", "prob": 40, "count": [ 1, 3 ] },
+      { "item": "bandages", "prob": 20 }
+    ]
+  },
+  {
+    "//": "THE FIELD LOG, AND WHY IT NEEDS A GROUP OF ITS OWN.  mapgen's 'place_items' takes an item GROUP id, not an item id - placing the log directly failed with 'Invalid item_group_id \"scp_087_field_log\" in mapgen scp_087_z-9' (src/mapgen.cpp:2451, jmapgen_item_group::check).  So the log is wrapped in a one-entry collection here and the mapgen refers to this group instead.  A collection with a single 100% entry is simply 'always exactly this item'.",
+    "type": "item_group",
+    "subtype": "collection",
+    "id": "scp_087_field_log_group",
+    "entries": [ { "item": "scp_087_field_log" } ]
+  },
+  {
+    "//": "THE FIELD LOG.  The one thing in the shaft that is not random: this is why a player would go all the way to the bottom, so it is always there.  PURE TEXT - no skill, no recipe, no mechanic.  The whole log lives in the description, which the item info panel wraps and scrolls properly; a 'message' use_action also exists (items/tool/explosives.json:26) but a multi-page text reads badly in the message log.",
+    "//2": "TYPE IS 'ITEM', NOT 'GENERIC' - which cost one failed loader run to learn.  This build has renamed the plain item type (see data/json/items/gun/223.json:4, `\"type\": \"ITEM\", \"subtypes\": [ \"GUN\" ]`); a file using GENERIC fails outright with 'unrecognized JSON object' and the game will not start.",
+    "//3": "WHY THIS DOES NOT copy-from 'paper' ANY MORE, and must not.  It used to, to inherit weight/volume/material - and that quietly dragged in three properties from data/json/items/generic.json:1426-1439: `\"category\": \"spare_parts\"` (the unique reward filed as a spare part), `\"ammo_type\": \"paper\"` (it claimed to be ammunition), and above all `\"flags\": [ \"TINDER\", \"PAPER_SHAPED\" ]` - which made the one guaranteed item in the mod usable as fire-lighting tinder, so a player could burn the reward for a campfire.  copy-from copies the whole identity, not the fields you had in mind.  The five fields it needed are therefore declared here explicitly, and there is no category at all rather than a wrong one.",
+    "type": "ITEM",
+    "id": "scp_087_field_log",
+    "name": { "str_sp": "Foundation field log" },
+    "description": "A Foundation field log, water-stained and dog-eared, the survey notes giving way over four pages to a hand that is no longer steady.\n\n'Third descent.  The treads are dished the same way.  Same smear of paint at shoulder height, same hairline crack in the fourth step.  I have started marking the wall in chalk to settle it.  The marks are not there when I come back down.'\n\n'Fifth.  Thirteen steps, then the landing, then thirteen more.  I have counted to two hundred and forty and the flight is exactly as long as it was at the top.  The cable at the doorframe is still live - I can hear the relay click through the concrete, so the surface is up there.  Up is simply not where the stairs go any more.'\n\n'Eighth.  I want to write down that I am not frightened, for whoever finds this, and I cannot make myself write it.'\n\n'The crying has not come any closer.  It is not the crying I am listening for now.'",
+    "symbol": ",",
+    "color": "white",
+    "weight": "3 g",
+    "volume": "6 ml",
+    "material": [ "paper" ],
+    "price": "0 cent",
+    "price_postapoc": "0 cent"
+  }
+]

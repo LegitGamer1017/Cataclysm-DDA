@@ -1,0 +1,67 @@
+[
+  {
+    "//": "THE DISGUISED CLOSET.  From the article: 'The doorway leading to SCP-087 is constructed of reinforced steel with an electro-release lock mechanism.  It has been disguised to resemble a janitorial closet consistent with the design of the building.'  So on the overmap it must read as an ordinary, unremarkable closet - the horror is that the most dangerous place in the region is labelled like a mop cupboard.  NO_ROTATE because the special's stair placement is hand-authored and must not be rotated away from the mapgen.",
+    "type": "overmap_terrain",
+    "id": "scp_087_z0",
+    "name": "janitorial closet",
+    "sym": "C",
+    "color": "light_gray",
+    "//2": "TILES (looks_like): the overmap is drawn from the OVERMAP tileset, which is a different set from the map tileset - in this install gfx/Larwick_Overmap.  Its id list was checked directly: 'warehouse' is present there AND is a real overmap_terrain id (data/json/overmap/overmap_terrain/overmap_terrain_industrial.json:91), so it resolves to a plain industrial building icon - unremarkable, which is the whole point of the disguise.  Note 'house' and 'cabin' are NOT valid here: neither exists as an oter id, so pointing at them would resolve to nothing.  Cosmetic only (the drawer's overmap case is src/cata_tiles.cpp:2033), and every shaft level below copies this entry, so this one line covers all ten.",
+    "looks_like": "warehouse",
+    "see_cost": "full_high",
+    "vision_levels": "underground_dirt",
+    "flags": [ "NO_ROTATE", "KNOWN_DOWN" ]
+  },
+  {
+    "//": "Shaft level.  copy-from the surface entry so the styling stays identical, but the name changes: below ground it is no longer a closet, it is a stairwell.  KNOWN_UP/KNOWN_DOWN so the overmap marks the vertical connection.  These entries deliberately carry NO special flags - the darkness is a property of the terrain and the absence of light, not of the overmap terrain.",
+    "type": "overmap_terrain",
+    "id": "scp_087_z-1",
+    "copy-from": "scp_087_z0",
+    "name": "stairwell",
+    "sym": ">",
+    "color": "dark_gray",
+    "flags": [ "NO_ROTATE", "KNOWN_UP", "KNOWN_DOWN" ]
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "scp_087_z-2",
+    "copy-from": "scp_087_z-1"
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "scp_087_z-3",
+    "copy-from": "scp_087_z-1"
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "scp_087_z-4",
+    "copy-from": "scp_087_z-1"
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "scp_087_z-5",
+    "copy-from": "scp_087_z-1"
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "scp_087_z-6",
+    "copy-from": "scp_087_z-1"
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "scp_087_z-7",
+    "copy-from": "scp_087_z-1"
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "scp_087_z-8",
+    "copy-from": "scp_087_z-1"
+  },
+  {
+    "//": "The deepest authored level.  It has no way down of its own - the 'seam' is a terrain tile (t_scp_087_seam) that teleports the player back up, so this level is KNOWN_UP only.  There is deliberately no KNOWN_DOWN: the shaft has no bottom the player can reach.",
+    "type": "overmap_terrain",
+    "id": "scp_087_z-9",
+    "copy-from": "scp_087_z-1",
+    "flags": [ "NO_ROTATE", "KNOWN_UP" ]
+  }
+]

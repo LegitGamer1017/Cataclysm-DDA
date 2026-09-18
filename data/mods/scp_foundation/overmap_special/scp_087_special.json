@@ -1,0 +1,32 @@
+[
+  {
+    "//": "THE SCP-087 REGION ENTRY.  A single overmap tile on the surface (scp_087_z0, the disguised janitorial closet) that continues downward through ten z-levels.  This is the multi-z special pattern proven by the Slime Pit (data/json/overmap/overmap_special/specials.json:1446-1456), which lists one overmap terrain per negative z.",
+    "//2": "'rotate': false is deliberate.  The mapgen hand-places the stairwell mouth and the seam trap at specific coordinates, and rotating the special would move them away from the terrain the EOCs expect.  This is why every overmap terrain here also carries NO_ROTATE.",
+    "//3": "'locations': [ 'land' ] with a city_distance band puts it on buildable flat ground near settlements, matching the article ('SCP-087 is located on the campus of [REDACTED]').  'SAFE_AT_WORLDGEN' keeps ambient worldgen monster groups out so the only thing down there is what the mod deliberately puts there (it is actually consumed - src/overmap.cpp:3000, :3055).  'MAN_MADE' (B7) is HARMLESS BUT INERT IN THE BASE GAME: it is documented at doc/JSON/JSON_FLAGS.md:1370 and overmap_special parses 'flags' as plain strings (src/overmap_special.cpp:352), but nothing in src/ reads the name - it only carries meaning through a dimension's feature_flag_settings (Innawood).  Keep it if a future dimension wants to react to it, but do not expect it to mark anything as constructed.",
+    "//4": "RARITY, AND THE TRAP IN GETTING IT.  This entry is paired with OVERMAP_UNIQUE, and that flag changes what `occurrences` MEANS.",
+    "//4b": "  WITHOUT the flag, `occurrences: [a, b]` is a plain count: the generator tries to place a..b instances on every overmap.  The old value here, [0, 2], was therefore NOT rare at all - it is the same pair the base game uses for ordinary specials (data/json/overmap/overmap_special/specials.json is full of [0, 2] and [0, 3]).  Two instances per 180x180 overmap is a common landmark, not a rumour.",
+    "//4c": "  WITH the flag, the pair becomes a DECK (src/overmap.cpp:3296-3314): `occurrences.max` cards of which `occurrences.min` are successes, one card drawn per overmap, reshuffled when the deck empties.  [1, 12] is therefore one success per twelve candidate overmaps, and 'Allow exactly one placement attempt on this overmap' (:3319) means never two in the same overmap.  Rarity is now a single tunable number: [1, 6] is roughly one per six overmaps, [1, 20] one per twenty.  The deck is drawn before the land and city constraints are tested, so the real rate is slightly rarer than 1-in-12.",
+    "//4d": "  THE TRAP IN THAT: `if( occ_min <= 0 || occ_max <= 0 ) { iter = enabled_specials.erase( iter ); }` (:3285-3288).  OVERMAP_UNIQUE WITH A MINIMUM OF ZERO DELETES THE SPECIAL FROM THE CANDIDATE LIST and it will never spawn anywhere, silently - which is why the pair here is [1, 12] and must never be [0, 12].  A minimum of 1 is required by the flag, not a preference.",
+    "//4e": "  AND A CORRECTION: OVERMAP_UNIQUE is one per OVERMAP, not one per world.  The note that used to sit here argued the flag 'would fight the recurrence design' - that is GLOBALLY_UNIQUE, which really is once-ever-per-world (src/overmap.cpp:3276, :3291).  Recurrence across overmaps is completely untouched by this flag, which is exactly what the archive design wants.",
+    "type": "overmap_special",
+    "id": "SCP-087",
+    "overmaps": [
+      { "point": [ 0, 0, 0 ], "overmap": "scp_087_z0" },
+      { "point": [ 0, 0, -1 ], "overmap": "scp_087_z-1" },
+      { "point": [ 0, 0, -2 ], "overmap": "scp_087_z-2" },
+      { "point": [ 0, 0, -3 ], "overmap": "scp_087_z-3" },
+      { "point": [ 0, 0, -4 ], "overmap": "scp_087_z-4" },
+      { "point": [ 0, 0, -5 ], "overmap": "scp_087_z-5" },
+      { "point": [ 0, 0, -6 ], "overmap": "scp_087_z-6" },
+      { "point": [ 0, 0, -7 ], "overmap": "scp_087_z-7" },
+      { "point": [ 0, 0, -8 ], "overmap": "scp_087_z-8" },
+      { "point": [ 0, 0, -9 ], "overmap": "scp_087_z-9" }
+    ],
+    "locations": [ "land" ],
+    "city_distance": [ 1, 30 ],
+    "city_sizes": [ 4, 20 ],
+    "occurrences": [ 1, 12 ],
+    "rotate": false,
+    "flags": [ "MAN_MADE", "SAFE_AT_WORLDGEN", "OVERMAP_UNIQUE" ]
+  }
+]

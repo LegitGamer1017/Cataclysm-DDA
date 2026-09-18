@@ -1,0 +1,102 @@
+[
+  {
+    "//": "THE FREEZE.  SCP-173 holds still only while the player can actually watch it.  'player_see_u' resolves to get_player_view().sees(here, *monster) (src/condition.cpp:1245) - i.e. 'the player can see me'.  Called as a monster special attack, so u_ is SCP-173 and npc_ is its target (the player).  The blind/sleep exclusions are load-bearing: Creature::sees returns TRUE unconditionally at range <= 1 (src/creature.cpp:598), so without them the sculpture would count as 'seen' even while the player is blinded or asleep and would freeze forever at melee range, killing the mechanic.  scp_173_lunge is the exact complement of this condition, so precisely one of the two fires each turn.",
+    "type": "monster_attack",
+    "attack_type": "eoc",
+    "id": "scp_173_freeze",
+    "cooldown": 1,
+    "range": 1,
+    "condition": { "and": [ "player_see_u", { "not": { "npc_has_effect": "blind" } }, { "not": { "npc_has_effect": "sleep" } } ] },
+    "eoc": [ "EOC_SCP_173_FREEZE" ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_173_FREEZE",
+    "effect": [
+      {
+        "//": "2 turns, not 1: effect durations decay in process_turn BEFORE move() (src/do_turn.cpp:316 vs :337), so a 1-turn effect would expire before the next turn's move and the sculpture would lurch forward every other turn.  Refreshed every turn it is watched.",
+        "u_add_effect": "immobilization",
+        "duration": 2
+      },
+      {
+        "//": "State marker: 'under observation right now'.  The invulnerability EOC keys off this rather than re-deriving sight at damage time, so the two can never disagree about whether the player was watching.",
+        "u_add_effect": "scp_173_observed",
+        "duration": 2
+      },
+      {
+        "//": "Ambience.  From the article: personnel report sounds of scraping stone from within the container when no one is present inside, considered normal.  Fired here - while it is frozen and being watched - so the player hears the grinding even though it is standing perfectly still.  Periodic rather than every turn so it stays unsettling instead of spammy.",
+        "if": { "math": [ "rand(100) < 15" ] },
+        "then": [ { "u_make_sound": "a low, steady rasping of stone on stone", "volume": 10, "type": "movement" } ]
+      },
+      {
+        "//": "The involuntary blink.  This is the crux of the design: the player's sight is omnidirectional and there is no 'look away' key, so the sculpture must force the window open itself.  Canon: SCP-173's containment procedure has two personnel maintain eye contact and instructs them to alert one another before blinking - because blinking is not optional.  Duration 2 so the window survives into the next monster move.  Primary tuning knob for how often it gets to act.",
+        "if": { "math": [ "rand(100) < 20" ] },
+        "then": [
+          { "npc_add_effect": "blind", "duration": 2 },
+          { "npc_message": "You blink.  When your eyes open again, the sculpture is closer.", "type": "warning" },
+          { "u_make_sound": "a dry grinding of stone on stone", "volume": 20, "type": "movement" }
+        ]
+      }
+    ]
+  },
+  {
+    "//": "THE LUNGE.  Fires only when the player's observation is genuinely broken - blinded or asleep.  This is the exact complement of scp_173_freeze's condition, so between the two, one always fires when the player is nearby.  When the player is neither blinded nor asleep and simply cannot see it (a corner, or darkness at range), NEITHER attack fires and the sculpture walks freely: that is the slow stalk.",
+    "type": "monster_attack",
+    "attack_type": "eoc",
+    "id": "scp_173_lunge",
+    "cooldown": 1,
+    "range": 1,
+    "condition": { "or": [ { "npc_has_effect": "blind" }, { "npc_has_effect": "sleep" } ] },
+    "eoc": [ "EOC_SCP_173_LUNGE" ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_173_LUNGE",
+    "effect": [
+      {
+        "//": "The instant it moves, it is no longer 'being watched' - clear the marker so it becomes damageable for the whole window instead of coasting on last turn's observation.",
+        "u_lose_effect": "scp_173_observed"
+      },
+      {
+        "//": "Never kill an unaware sleeper outright - wake them first, so the player always gets the reveal rather than a silent death.",
+        "if": { "npc_has_effect": "sleep" },
+        "then": [
+          { "npc_lose_effect": "sleep" },
+          {
+            "npc_message": "You are jolted awake by a sound like a chair being dragged across concrete.",
+            "type": "bad"
+          },
+          { "u_make_sound": "a screech of stone on stone", "volume": 40, "type": "combat" }
+        ]
+      },
+      {
+        "//": "Find a passable tile beside the player and put the sculpture there.  force_safe guarantees it lands adjacent instead of failing.",
+        "npc_location_variable": { "context_val": "scp_173_target" },
+        "min_radius": 1,
+        "max_radius": 1,
+        "passable_only": true
+      },
+      { "u_teleport": { "context_val": "scp_173_target" }, "force_safe": true },
+      {
+        "//": "Already at your throat.  Bash to the head; armor still applies, so a real helmet matters.  20 damage with 8 arpen is deliberately survivable in one blow for a healthy character - this is the price of blinking, not an unavoidable execution.  Main balance knob alongside the blink chance above.",
+        "npc_deal_damage": "bash",
+        "amount": 20,
+        "arpen": 8,
+        "bodypart": "head"
+      },
+      { "npc_message": "Concrete fingers close around the base of your skull.", "type": "bad" }
+    ]
+  },
+  {
+    "//": "Death hook.  SCP-173 has no realistic kill path in normal play, but if a player manages it, clear the primary latch so the next quota sweep promotes a survivor or a newly spawned instance - the world is never left permanently without a valid primary.  Precedent for death_function.eoc and its beta talker is data/json/monsters/zed_misc.json (EOC_NEMESIS_DIED).",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_173_DIED",
+    "effect": [
+      { "math": [ "scp_173_claimed = 0" ] },
+      {
+        "if": "has_alpha",
+        "then": [ { "u_message": "The rubble is inert.  Whatever animated it is gone - for now.", "type": "info" } ]
+      }
+    ]
+  }
+]

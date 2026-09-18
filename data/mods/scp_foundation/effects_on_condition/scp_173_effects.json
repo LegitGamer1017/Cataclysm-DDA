@@ -1,0 +1,11 @@
+[
+  {
+    "//": "Marks SCP-173 as currently under the player's observation.  Applied by the freeze attack every turn it is watched; expires on its own the moment observation stops.  This is what makes 'cannot be harmed while observed' work without re-deriving sight state at damage time (which is fragile at range <= 1 - see the note in scp_173_attacks.json).",
+    "type": "effect_type",
+    "id": "scp_173_observed",
+    "name": [ "Observed" ],
+    "desc": [ "Being watched holds it perfectly still." ],
+    "show_in_info": false,
+    "rating": "neutral"
+  }
+]

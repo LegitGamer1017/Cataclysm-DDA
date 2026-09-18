@@ -1,0 +1,108 @@
+[
+  {
+    "//": "COMPANION REFUSAL, PART 1: THE DOOR.  The threshold is a solo-only place.  From the plan: 'At the surface threshold, an EOC checks for followers and pets.  They refuse to enter with: They will not go down there.'",
+    "//2": "Fires on the avatar entering the surface closet OMT (scp_087_z0).  The avatar_enters_omt event delivers 'oter_id' as a context variable; gating keeps it from firing on every map transition world-wide.",
+    "//3": "NPC COMPANIONS are pushed OUTSIDE the building on the spot (see //5).  This is the narrated beat; the ENFORCEMENT that they cannot follow you down is EOC_SCP_087_COMPANION_ESCORT below.",
+    "//4": "PETS need no code: the shaft mouth tile t_scp_087_threshold carries MON_AVOID_STRICT, which stops EVERY monster - including friendly pets - from crossing into the shaft (src/monmove.cpp:172-174).  A pet physically cannot follow you down.  This is the same boundary that contains SCP-087-1.",
+    "//5": "B3 FIX (a) - WHY THE TARGET MOVED OUTDOORS: the previous form captured the avatar's own position into scp_087_exit_here and teleported every NPC in range to it - but at this moment the avatar is INSIDE the closet, so companions were pulled in after you rather than left behind, which is the opposite of what this comment claimed.  Each NPC now finds its own exit tile instead: a u_location_variable with 'outdoor_only': true and 'passable_only': true, teleporting only through the search's true_eocs.  outdoor_only is evaluated inside the radius search (src/npctalk.cpp:4414 parses the flag, :4593 applies it as here.is_outside(...)), and the closet is INDOORS + SUPPORTS_ROOF at z0 with walls on all four sides, so the nearest qualifying tile is outside the building.  The guard matters for the same reason as B5 (see monster_attacks/scp_087_1_attacks.json //4): f_location_variable can fail and return without writing the variable (src/npctalk.cpp:4600-4603), and an unguarded teleport would then act on an unset location.  Search radius 25 comfortably clears the 24x24 building from anywhere inside it; npc_range is 8 (down from 20) so the beat lands on whoever is actually with you at the door rather than on bystanders across the map.",
+    "//6": "THE NARRATION ONLY FIRES IF SOMEONE WAS ACTUALLY REFUSED (playtest fix).  It used to be an unconditional u_message on entering the tile, so a lone survivor with no companions at all still announced 'You turn to the others.  We go alone.' to an empty street.  The dispatch cannot answer 'is anyone there?' for us - u_run_npc_eocs simply runs the child EOC zero or more times and reports nothing back (src/npctalk.cpp:6840-6845) - and there is no condition for 'a follower is nearby': following is not an ally_rule at all (the enum is src/npc.h:310-328 and has no 'follow'), so u_has_ai_rule cannot express it.  So the child EOC raises a flag as it runs, and the narration is gated on that flag.  IT MUST BE A GLOBAL: u_run_npc_eocs copies the dialogue per NPC (src/npctalk.cpp:6842), so a context variable written inside the child would be discarded - globals live on the game object, not the dialogue, and survive the copy.  The flag is cleared before the dispatch as well as after, so it can never be left set by an interrupted run.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_087_COMPANION_GATE",
+    "eoc_type": "EVENT",
+    "required_event": "avatar_enters_omt",
+    "condition": { "compare_string": [ "scp_087_z0", { "context_val": "oter_id" } ] },
+    "effect": [
+      { "math": [ "scp_087_refused_someone = 0" ] },
+      { "u_run_npc_eocs": [ "EOC_SCP_087_SEND_NPC_BACK" ], "npc_range": 8, "npc_must_see": false },
+      {
+        "if": { "math": [ "scp_087_refused_someone == 1" ] },
+        "then": [
+          {
+            "u_message": "You turn to the others.  'We go alone,' you say, because someone has to stay where the light still works.",
+            "type": "info"
+          },
+          { "math": [ "scp_087_refused_someone = 0" ] }
+        ]
+      }
+    ]
+  },
+  {
+    "//": "Runs once per nearby NPC.  TALKER ROLES (verified src/npctalk.cpp:6842): u_run_npc_eocs builds dialogue( get_talker_for(target), nullptr, ... ) - the target NPC is ALPHA and beta is NULL.",
+    "//2": "Therefore: the teleport MUST be u_teleport (alpha, src/npctalk.cpp:8160 - f_teleport acts on d.actor(is_npc)); npc_teleport would hit the null beta, fire debugmsg('Tried to use an invalid beta talker') (src/npctalk.cpp:2706-2711) and then silently fall back to alpha.  Likewise the location search is centred on the NPC (alpha), so each refuser finds its OWN way out rather than sharing one target.",
+    "//3": "The announcement MUST be `message`, not u_message: f_message returns early when the acting character is an NPC (src/npctalk.cpp:5542-5544: if( !target || target->is_npc() ) return;), and here alpha IS an NPC - so a u_message would never be shown.  `message` is the global variant (src/npctalk.cpp:8568) and always displays to the player.",
+    "//4": "<npc_name> resolves on the dialogue's 'me' talker (src/npctalk.cpp:2400), which in this NPC-run EOC is the NPC itself, so the name substitutes correctly.",
+    "//5": "The teleport is reached ONLY via true_eocs, so if no passable outdoor tile is found within 25 tiles the NPC is simply left where they are (B5 pattern).",
+    "//6": "RUNNING AT ALL IS THE SIGNAL: this EOC only ever fires for an NPC the dispatch actually found, so setting scp_087_refused_someone here is what tells the parent gate EOC that its narration is warranted.  It is set before the search so that an NPC who could not be moved still counts as addressed - they were told to stay behind either way.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_087_SEND_NPC_BACK",
+    "effect": [
+      { "math": [ "scp_087_refused_someone = 1" ] },
+      { "message": "<npc_name> will not go down there, and steps back out into the light.", "type": "warning" },
+      {
+        "u_location_variable": { "context_val": "scp_087_npc_outside" },
+        "max_radius": 25,
+        "passable_only": true,
+        "outdoor_only": true,
+        "true_eocs": [ "EOC_SCP_087_NPC_STEP_OUTSIDE" ]
+      }
+    ]
+  },
+  {
+    "//": "The out-into-the-light move, split out so it can only run when the search actually found an outdoor tile (B5 pattern).  alpha is still the NPC (the dialogue is copied - src/npctalk.cpp:501-507), so u_teleport relocates the refuser, not the avatar.  Shared by the door beat and the enforcement net below.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_087_NPC_STEP_OUTSIDE",
+    "effect": [ { "u_teleport": { "context_val": "scp_087_npc_outside" }, "force_safe": true } ]
+  },
+  {
+    "//": "COMPANION REFUSAL, PART 2: THE ENFORCEMENT NET (B3 FIX b).  The door beat alone is a one-shot nudge - MON_AVOID_STRICT is consulted only by monster::will_move_to (src/monmove.cpp:172-174), so it stops pets but NOT NPCs, and an NPC follower's own pathfinding will walk back into the closet and down the stairwell after you.  This is what makes the refusal a real barrier instead of narration: every 10 seconds while you are below ground in an active descent, any NPC standing on shaft terrain is lifted back to the surface and pushed outside again.",
+    "//2": "GATED AT THE EOC LEVEL on scp_087_loops > 0 && u_val('pos_z') < 0 (evaluated before the body - src/effect_on_condition.cpp:370), so above ground this costs one condition test every 10 seconds and the NPC dispatch below never runs - the same L3 pattern as the keeper, paranoia and cry drivers.  NOTE the gate is deliberately NOT tight: scp_087_loops only returns to 0 at the loop-13 ejection (EOC_SCP_087_EJECT), so after any reversible visit it stays > 0 for the rest of the world's life, and this EOC therefore also ticks while you are underground somewhere else entirely.  That is harmless and cheap because the shaft scoping is done by the per-NPC TERRAIN test in //3, not by this condition - there is no shaft terrain outside the shaft, so those ticks are no-ops.  The same reasoning is why the paranoia and cry drivers can keep their matching pos_z gate.",
+    "//3": "WHY IT IS SAFE TO ESCORT *ANY* NPC IT FINDS: the dispatch is filtered to NPCs at z -10..-1 (u_run_npc_eocs compares each NPC's posz() against z_min/z_max - src/npctalk.cpp:6837-6838, and setting a z-span also waives the implicit same-z requirement at :6834), and the per-NPC EOC then requires the NPC to be standing on a SHAFT terrain before touching it (the same 6-way map_terrain_id OR the paranoia driver uses, because map_terrain_id matches one id at a time - src/condition.cpp:1725-1745).  Without that terrain test this would drag unrelated NPCs out of basements and subways in the same reality bubble.  npc_range 40 covers the whole shaft: it spans at most 9 z-levels and one 24x24 overmap tile.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_087_COMPANION_ESCORT",
+    "eoc_type": "RECURRING",
+    "recurrence": 10,
+    "global": true,
+    "condition": { "and": [ { "math": [ "scp_087_loops > 0" ] }, { "math": [ "u_val('pos_z') < 0" ] } ] },
+    "effect": [
+      { "u_run_npc_eocs": [ "EOC_SCP_087_NPC_ESCORT" ], "npc_range": 40, "z_min": -10, "z_max": -1, "npc_must_see": false }
+    ]
+  },
+  {
+    "//": "Runs once per NPC found below ground (alpha IS the NPC).  Silent on purpose - only the door beat narrates, so this can never spam the log.",
+    "//2": "THE LIFT, and why it needs no stored surface anchor: u_location_variable writes the NPC's own position into scp_087_escort_here (max_radius defaults to 0, so it is a plain copy of the actor's position, not a search - src/npctalk.cpp:4408-4409, :4484-4485), then location_variable_adjust re-emits it with 'z_override': true and z_adjust 0, which REPLACES the z rather than offsetting it (src/npctalk.cpp:4658-4659: target_pos = { target_pos.xy(), dov_z_adjust.evaluate( d ) }).  That yields the same map square one level up, i.e. the surface: the special is a single overmap column, z0 is the closet, and every passable shaft tile maps onto a passable closet tile, so the lift always lands somewhere legal.  teleport::teleport_to_point then takes the in-bubble path, because map::inbounds accepts any z in -OVERMAP_DEPTH..OVERMAP_HEIGHT (src/map.cpp:10235-10244), so no standalone map is loaded and force_safe resolves any residual obstruction.",
+    "//3": "STAGE 2 pushes them the rest of the way out.  Now that the NPC is standing at z0 the outdoor_only search is meaningful again (an outdoor search at z<0 finds nothing - the shaft is INDOORS at every level), and it reuses EOC_SCP_087_NPC_STEP_OUTSIDE exactly as the door beat does.  A follower can walk back in and descend again, but it cannot stay: it will be lifted out again on the next tick, which is what 'they will not go down there' has to mean in practice.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_087_NPC_ESCORT",
+    "effect": [
+      { "u_location_variable": { "context_val": "scp_087_escort_here" } },
+      {
+        "if": {
+          "or": [
+            { "map_terrain_id": "t_scp_087_floor", "loc": { "context_val": "scp_087_escort_here" } },
+            { "map_terrain_id": "t_scp_087_landing", "loc": { "context_val": "scp_087_escort_here" } },
+            { "map_terrain_id": "t_scp_087_stairs_down", "loc": { "context_val": "scp_087_escort_here" } },
+            { "map_terrain_id": "t_scp_087_stairs_up", "loc": { "context_val": "scp_087_escort_here" } },
+            { "map_terrain_id": "t_scp_087_stairs_none", "loc": { "context_val": "scp_087_escort_here" } },
+            { "map_terrain_id": "t_scp_087_seam", "loc": { "context_val": "scp_087_escort_here" } }
+          ]
+        },
+        "then": [
+          {
+            "location_variable_adjust": { "context_val": "scp_087_escort_here" },
+            "z_override": true,
+            "z_adjust": 0,
+            "output_var": { "context_val": "scp_087_escort_surface" }
+          },
+          { "u_teleport": { "context_val": "scp_087_escort_surface" }, "force_safe": true },
+          {
+            "u_location_variable": { "context_val": "scp_087_npc_outside" },
+            "max_radius": 25,
+            "passable_only": true,
+            "outdoor_only": true,
+            "true_eocs": [ "EOC_SCP_087_NPC_STEP_OUTSIDE" ]
+          }
+        ]
+      }
+    ]
+  }
+]

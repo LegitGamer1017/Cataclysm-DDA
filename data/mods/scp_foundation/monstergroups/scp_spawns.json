@@ -1,0 +1,18 @@
+[
+  {
+    "//": "Spawn rate for SCP-173.  Same-id monstergroups MERGE rather than replace (src/mongroup.cpp:470 - a group with an existing id is extended unless 'override': true), so these entries are ADDED to the base game's lab groups without disturbing the existing zombies.  The weight is deliberately tiny: 1 in a few thousand rolls.  This governs HOW OFTEN it appears; the quota sweep in scp_spawn_policy.json governs HOW MANY can exist at once.  Keep those two concerns separate.",
+    "type": "monstergroup",
+    "id": "GROUP_LAB",
+    "monsters": [ { "monster": "mon_scp_173", "weight": 1, "cost_multiplier": 0 } ]
+  },
+  {
+    "type": "monstergroup",
+    "id": "GROUP_LAB_SECURITY",
+    "monsters": [ { "monster": "mon_scp_173", "weight": 1, "cost_multiplier": 0 } ]
+  },
+  {
+    "type": "monstergroup",
+    "id": "GROUP_LAB_SURFACE",
+    "monsters": [ { "monster": "mon_scp_173", "weight": 1, "cost_multiplier": 0 } ]
+  }
+]

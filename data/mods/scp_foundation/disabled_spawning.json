@@ -1,0 +1,11 @@
+[
+  {
+    "//": "SPAWNING DISABLED.  SCP-173 is temporarily switched off until its design is settled - specifically, whether it should be hostile to other monsters, and how its attacks should target.  Nothing has been deleted: mon_scp_173, its special attacks, EOCs, faction and species all still load normally.",
+    "//2": "This uses MONSTER_BLACKLIST, the native mechanism documented in doc/MODDING.md.  At finalize time it strips the listed monster out of every monstergroup (src/mongroup.cpp:433-437), so SCP-173 cannot spawn anywhere in the world regardless of what monstergroups/scp_spawns.json says.  That makes this file a single on/off switch for SCP-173.",
+    "//3": "TO RE-ENABLE SCP-173: delete this file, or comment out the object below.  Nothing else needs to change - monstergroups/scp_spawns.json still holds the intended spawn weights.",
+    "//4": "The blacklist is checked in creature_tracker::add (src/creature_tracker.cpp:93), which every placement path goes through - including the debug menu's 'Spawn monster' (wishmonster), which uses place_critter_*  (src/game.cpp:4536).",
+    "//5": "DO NOT ADD mon_scp_087_1 HERE.  The blacklist rejects the monster in creature_tracker::add, and u_spawn_monster also places through place_critter_at -> creature_tracker::add (src/game.cpp:4536), as does the hallucination layer (src/game.cpp:4727).  Blacklisting it therefore does not merely stop natural spawning - it silently disables the whole SCP-087 encounter (EOC_SCP_087_1_SUMMON and the hallucinations would do nothing).  mon_scp_087_1 needs no blacklist entry anyway: it has no natural spawn path, since GROUP_SCP_ALL is an index that nothing spawns from.",
+    "type": "MONSTER_BLACKLIST",
+    "monsters": [ "mon_scp_173" ]
+  }
+]

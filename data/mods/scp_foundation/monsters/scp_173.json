@@ -1,0 +1,42 @@
+[
+  {
+    "id": "mon_scp_173",
+    "type": "MONSTER",
+    "name": { "str_sp": "SCP-173" },
+    "description": "A vaguely humanoid figure assembled from concrete and rebar, daubed with faded spray paint.  It does not breathe, it does not blink, and it does not move while you are looking at it.  The floor beneath it is smeared with a reddish-brown residue you would rather not identify.  Listen: somewhere in the quiet there is a dry, grinding sound, like stone being dragged across stone.",
+    "default_faction": "foundation",
+    "species": [ "SCP" ],
+    "diff": 90,
+    "volume": "600 L",
+    "weight": "1800 kg",
+    "hp": 450,
+    "speed": 45,
+    "material": [ "stone" ],
+    "symbol": "S",
+    "color": "light_gray",
+    "aggression": 100,
+    "morale": 100,
+    "melee_skill": 10,
+    "melee_dice": 4,
+    "melee_dice_sides": 10,
+    "melee_damage": [ { "damage_type": "bash", "amount": 18, "armor_penetration": 12 } ],
+    "dodge": 0,
+    "vision_day": 40,
+    "vision_night": 5,
+    "harvest": "exempt",
+    "regenerates": 10,
+    "armor": { "bash": 10, "cut": 30, "bullet": 24, "electric": 5, "acid": 10, "heat": 5, "cold": 10 },
+    "flags": [ "SEES", "HEARS", "PLASTIC", "ACIDPROOF", "NOHEAD", "NOGIB", "NO_BREATHE", "PUSH_MON", "DESTROYS" ],
+    "//": "Deliberately NOT set: zombify_into, fungalize_into, burn_into, revive_forms.  It is concrete; it does not rot, catch, or turn.  upgrades is disabled for the same reason.  Also NOT ALL_SEEING - it must not see through walls.",
+    "upgrades": false,
+    "death_function": {
+      "corpse_type": "NO_CORPSE",
+      "message": "The %s shatters into a heap of inert rubble.  Somewhere, a containment team is already filing the paperwork.",
+      "eoc": "EOC_SCP_173_DIED"
+    },
+    "anger_triggers": [ "PLAYER_CLOSE", "HURT", "HOSTILE_SEEN" ],
+    "fear_triggers": [  ],
+    "special_attacks": [ { "id": "scp_173_freeze" }, { "id": "scp_173_lunge" } ],
+    "path_settings": { "max_dist": 40, "allow_open_doors": false, "avoid_traps": false, "avoid_dangerous_fields": true }
+  }
+]

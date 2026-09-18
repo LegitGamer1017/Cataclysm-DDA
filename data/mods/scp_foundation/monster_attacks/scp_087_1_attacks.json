@@ -1,0 +1,109 @@
+[
+  {
+    "//": "THE CLOSE - SCP-087-1's only attack, and per the agreed design it is NON-LETHAL.  Contact does not kill: it pins paranoia to the -99 floor (focus collapses to 1, src/character_health.cpp:551-556), drains stamina, knocks the player down, and applies an unmistakable cue.",
+    "//2": "This whole block is the isolated EOC branch the plan promised for the kill switch: to make contact lethal instead, replace the non-lethal punishment with a single npc_deal_damage fatal call - one block, nothing else.",
+    "//3": "In-fiction it states clearly that 087-1 is NOT the source of the crying - a deliberate plot point from the article.",
+    "//4": "RANGE 2 IS THE ADJACENCY GATE (B2 FIX) - do not set this back to 1.  mon_eoc_actor::call gates on distance only when range is GREATER THAN 1 (src/mattack_actors.cpp:325-330): `if( range > 1 && !allow_no_target ) { if( !mon.sees( here, *target ) || rl_dist( mon.pos_bub(), target->pos_bub() ) > range ) { return false; } }`.  So `range: 1` does NOT mean 'melee only' - it means NO RANGE CHECK AT ALL, and the payload then lands at whatever distance the monster happens to hold.  That mattered here because monster::attack_target() (src/monster.cpp:1643-1659) requires only that a creature occupies the monster's current path destination and that it `sees()` it - there is no adjacency requirement - and `sees()` short-circuits true for an ALWAYS_SEES_YOU monster against the avatar (src/creature.cpp:526-529), so 087-1 could deliver -99 morale, a stamina drain and a knockdown from clear across the shaft.  With range 2 the engine's own gate applies: it must SEE the player and be within rl_dist <= 2 (Chebyshev, so orthogonal and diagonal adjacency).  2 is the minimum value that enables the gate.  NOTE this is deliberately the engine mechanism rather than a hand-rolled distance condition, so the attack stays correct if the ballistics change; the shaft geometry has no interior walls, so a 2-tile reach cannot be used through cover.",
+    "type": "monster_attack",
+    "attack_type": "eoc",
+    "id": "scp_087_1_close",
+    "cooldown": 1,
+    "range": 2,
+    "condition": "npc_is_avatar",
+    "eoc": [ "EOC_SCP_087_1_CLOSE" ]
+  },
+  {
+    "//": "THE CONTACT PAYLOAD (non-lethal).  u_ is the monster; npc_ is the avatar, so the punishments target npc_.  Stamina is drained via u_val('stamina') math (NPCs.md:1527 - 'stamina' is a settable character aspect), the player is knocked down with the vanilla 'downed' effect (effects.json:687), and paranoia is pinned to the -99 floor with capped:true.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_087_1_CLOSE",
+    "effect": [
+      {
+        "npc_message": "The shape is at your back.  Its face is close enough that you can see there is nothing behind the skin.",
+        "type": "bad"
+      },
+      { "npc_add_effect": "scp_087_contact", "duration": "5 minutes" },
+      {
+        "//": "PLAYTEST FIX - RESTART THE GRACE WINDOW THE MOMENT IT CATCHES YOU.  Without this, contact CHAINS: the first playtest logged catches at 5215911 and 5215922 - eleven seconds apart.  The player was knocked down, struggled up, and was on the floor again before they could take a step, which is not the 'it arrives and is gone again' beat the design describes.",
+        "//2": "WHY IT CHAINED: EOC_SCP_087_1_KEEPER (recurrence 10) counts scp_087_1_idle up by one every ten seconds and resets it to 0 ONLY when the loop counter changes - ie when a descent completes.  Walking the shaft takes far longer than the window, so idle passed the FOLLOW threshold partway down and stayed past it, and once past it 087-1 was teleported onto the player's own anchor every single tick.  Stand up after a catch and the next tick could already be another catch, hence 11 seconds.  (The threshold was 3 ticks - 30 seconds - at the time; it is 18 ticks, ~3 minutes, now.)",
+        "//3": "The fix is one global write here rather than a retune of the knobs: idle returns to 0 on contact, so the grace window has to run again before the monster is placed on the player.  That window is now ~3 minutes (18 ticks, raised from 30 seconds in the same pass - see the inline note on the condition in scp_087_1_pursuer.json), so a catch buys a long breather rather than the old 30 seconds.  087-1 still closes on its own in the meantime through ordinary KEEP_DISTANCE pathing (the retreat is on its next turn, src/monster.cpp:1916-1919), so the encounter is not stalled - it just stops the floor-to-floor pummelling.  tuning knobs remain available if this is not enough: the threshold and 'recurrence: 10' in scp_087_1_pursuer.json.",
+        "math": [ "scp_087_1_idle = 0" ]
+      },
+      {
+        "npc_add_morale": "morale_scp_087_paranoia",
+        "bonus": -99,
+        "max_bonus": -99,
+        "duration": "30 minutes",
+        "capped": true
+      },
+      {
+        "//": "Drain stamina to a fraction of what it was - not a kill, but it makes flight genuinely hard.  Math scope prefixes are u_ (alpha) and n_ (beta); the avatar is the beta talker here, so n_val('stamina').",
+        "math": [ "n_val('stamina') = n_val('stamina') / 4" ]
+      },
+      {
+        "//": "Knock the player down.  'downed' is the vanilla prone effect; short duration so it is punishing, not a stunlock.",
+        "npc_add_effect": "downed",
+        "duration": "8 seconds"
+      },
+      {
+        "npc_message": "Your hands shake so hard you drop everything you were holding, and your knees give out on the step.",
+        "type": "bad"
+      },
+      { "u_make_sound": "a wet, held breath", "volume": 8, "type": "movement" }
+    ]
+  },
+  {
+    "//": "SLEEP INTERRUPT.  The plan's 'wake-then-terrify beat (non-lethal)'.  If the player sleeps inside the shaft while the descent is live, 087-1 wakes them and delivers the contact scare WITHOUT killing - you get the reveal, never a silent death in your sleep.",
+    "//2": "Runs on the avatar every minute.  GATED AT THE EOC LEVEL (B4 FIX): the condition is evaluated before the body (src/effect_on_condition.cpp:370), so outside an active descent the body never runs at all.  Previously 'scp_087_loops > 0' sat INSIDE the body, so this was the one recurring EOC in the mod that did two evaluations every 60 turns for the entire game - the keeper, paranoia and cry drivers all gate at the EOC level and this now matches them.  The added 'u_val(pos_z) < 0' closes DEVELOPING.md 9.2: without it the beat also fired while the player slept in the ordinary surface closet during the loops 1-4 reversible phase.  The shaft is z-1..z-9 and the closet is z0, so pos_z < 0 pins it to the shaft proper - the same 'below the surface' floor the paranoia and cry drivers use.",
+    "//3": "WAKE PATH (B4): the body removes the sleep effect rather than calling Character::wake_up() (src/character_health.cpp:2444-2470), because there is NO EOC effect that exposes wake_up() - the 'wake_up' name in src/npctalk.cpp:8630 is an NPC CONVERSATION RESPONSE effect (WRAP table for talk responses, cf. data/json/npcs/common_chat/TALK_COMMON_ALLY.json:26), not a u_/npc_ EOC effect.  Two consequences are deliberate: (1) wake_up() bails out entirely under effect_narcosis (:2447-2449), whereas removing the effect wakes the player anyway - which is exactly what the design promises ('you get the reveal, never a silent death'); (2) wake_up() also clears effect_lying_down, so we mirror that here, otherwise a player who lay down to sleep stays prone in the dark.  The sleep effect's own remove_message is 'You wake up.' (data/json/effects.json:4203), so the wake is narrated.",
+    "//4": "OWNER DECISION (playtest pass): KEEP THIS AS INSURANCE - DO NOT BROADEN IT.  It has not fired in either end-to-end run, and it is easy to see why: it needs the player to fall asleep with scp_087_loops > 0 and pos_z < 0, ie inside the shaft, with the pursuer live and no light to sleep by.  The option considered was widening it to any sleep during a live descent (dropping the below-ground half so it also covers the surface closet at z0), and that was rejected - it would fire in the ordinary closet during the reversible phase, which is precisely the false positive the B4 fix removed.  So it stays as a guarantee that anyone who DOES sleep down there is never killed in their sleep, at the cost of being a beat most players will never see.  Recorded here and in DEVELOPING 9.7 so it is not 're-discovered' as a bug later.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_087_SLEEP_INTERRUPT",
+    "eoc_type": "RECURRING",
+    "recurrence": 60,
+    "global": true,
+    "condition": { "and": [ { "math": [ "scp_087_loops > 0" ] }, { "math": [ "u_val('pos_z') < 0" ] } ] },
+    "effect": [
+      {
+        "if": { "u_has_effect": "sleep" },
+        "then": [
+          { "u_lose_effect": "sleep" },
+          { "u_lose_effect": "lying_down" },
+          { "u_add_effect": "scp_087_contact", "duration": "5 minutes" },
+          {
+            "u_message": "You are jolted awake by a sound like a chair being dragged across concrete, very close.  There is a shape at the edge of the light, and it is looking at you.",
+            "type": "bad"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "//": "INVULNERABILITY + STAGGER.  'Damage cannot reduce its HP or kill it, but each solid hit staggers/repels it, buying distance.'  Hooked to the monster_takes_damage event, mirroring SCP-173 (EOC_SCP_173_INVULNERABLE_WHILE_SEEN in scp_173_invulnerability.json).  ALPHA IS THE MONSTER (u_ = 087-1), beta is whatever hit it.",
+    "//2": "GATE ON SCP_087, NOT SCP (M1 fix): both SCP-173 and SCP-087-1 declared only [ \"SCP\" ], so gating on the broad family made this EOC fire on SCP-173 as well - stacking a free 087-1-style heal-and-stagger onto every hit on 173, on top of 173's own invulnerability EOC.  mon_scp_087_1 now also carries the narrower SCP_087 species (monsters/scp_087_1.json), and SCP-173 does not, so this matches 087-1 alone.  SCP-173's own behavior is unchanged.",
+    "//3": "On any hit: shift it to a nearby spot - the stagger that buys the player room.",
+    "//3b": "THE 'RESTORE HP TO FULL' LINE THAT USED TO BE HERE WAS REMOVED IN PLAYTEST, because it did nothing except fire a debugmsg (reported live: `DEBUG : invalid body part id \"ALL\"`, src/generic_factory.h:541).  Two verified reasons it could never have worked, both checked against the source rather than assumed:",
+    "//3c": "  (1) THE ID IS GENUINELY INVALID THERE.  hp_max_eval builds its bodypart straight from the string - `bodypart_id bp( params[0].str( d ) );` (src/math_parser_diag.cpp:686-691) - with NO special case for 'ALL', and hp_max is not assignable either (the diag table registers `{ \"hp_max\", { \"un\", 1, hp_max_eval } }` with no setter, :1879).  The reason the same string DOES work in u_hp is that hp_eval and hp_ass special-case it explicitly (:587 `bp_str == \"ALL\" ? bodypart_str_id::NULL_ID() : ...`, :597 `if( bp_str == \"ALL\" ) set_all_parts_hp_cur( val )`).  So u_hp_max('ALL') fell through to bodypart_str_id('ALL'), the factory could not resolve it, and convert() answered with a debugmsg plus null_id (src/generic_factory.h:534-544).",
+    "//3d": "  (2) EVEN WITH A VALID ID IT COULD NOT HEAL A MONSTER.  The write half of u_hp('ALL') is Creature::set_all_parts_hp_cur (src/math_parser_diag.cpp:597-598), which walks the creature's body-part map (src/creature.cpp:2775-2780).  A monster's real HP is the single `monster::hp` field: monster overrides only the GETTERS, and they ignore the bodypart argument entirely (src/monster.cpp:4072-4089 - `get_hp_max( const bodypart_id & )` returns `type->hp`, `get_hp( const bodypart_id & )` returns `hp`), and it does NOT override set_part_hp_cur (absent from src/monster.h; only the getters are listed at :126-129).  Writing to a monster's body parts therefore never reaches its HP.  This is why the invulnerability is declared on the monster itself instead - see monsters/scp_087_1.json //11.",
+    "//4": "STAGGER IS GUARDED (B5 FIX).  u_location_variable does NOT always write its output: f_location_variable makes 25 attempts and, if none satisfies the constraints, runs false_eocs and RETURNS WITHOUT WRITING THE VARIABLE (src/npctalk.cpp:4585-4604).  The old form had a bare u_teleport right after it, so on a failed search the teleport still ran against an unset context variable - and read_var_value returns a default-constructed value for a missing name (src/dialogue_helpers.cpp:19-24), ie an unintended destination.  The teleport therefore now lives in EOC_SCP_087_1_STAGGER, reached only through the search's true_eocs, so a failed search simply leaves 087-1 where it is.  run_eoc_vector copies the dialogue before activating the child (src/npctalk.cpp:501-507), so the context variable written on the line above is visible inside that EOC.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_087_1_DAMAGE",
+    "eoc_type": "EVENT",
+    "required_event": "monster_takes_damage",
+    "condition": { "and": [ "has_alpha", { "u_has_species": "SCP_087" }, "u_is_monster" ] },
+    "effect": [
+      {
+        "u_location_variable": { "context_val": "scp_087_1_stagger" },
+        "min_radius": 2,
+        "max_radius": 3,
+        "passable_only": true,
+        "true_eocs": [ "EOC_SCP_087_1_STAGGER" ]
+      }
+    ]
+  },
+  {
+    "//": "The stagger move, split out so it can only run when the search above actually found a tile (B5).  alpha is still 087-1 (the dialogue is copied, and the search wrote scp_087_1_stagger into it), so u_teleport moves the monster.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_087_1_STAGGER",
+    "effect": [ { "u_teleport": { "context_val": "scp_087_1_stagger" }, "force_safe": true } ]
+  }
+]

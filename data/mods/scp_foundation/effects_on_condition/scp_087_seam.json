@@ -1,0 +1,125 @@
+[
+  {
+    "//": "SCP-087 WORDSTATE.  Per-world (global_val) variables survive save/load (EFFECT_ON_CONDITION.md:125).  The whole escape model and the paranoia ladder are driven by these:",
+    "//2": "  scp_087_loops    - the LOOP COUNTER, incremented every time the seam returns the player to the top.  Drives the three escape phases and the paranoia escalation (EOC_SCP_087_PARANOIA).",
+    "//3": "  scp_087_archive  - a 1/0 flag recording that this world has already been through SCP-087 (reached loop-13 ejection once).  Lets the anomaly recur later with different first-time cues instead of replaying the same reveal.",
+    "//3b": "  scp_087_paranoia_at - the loop value the paranoia morale was last stepped for (N1).  EOC_SCP_087_PARANOIA applies its -5*loops morale step only when this differs from scp_087_loops, so the ladder is driven by descents rather than by elapsed time.  Reset to 0 here alongside the loop counter.",
+    "//3c": "  scp_087_knock_heard / scp_087_doorway_seen - the two once-per-visit guards for the door beats (EOC_SCP_087_DOOR_KNOCK and EOC_SCP_087_DOORWAY in scp_087_door.json).  Reset here because a visit can end with the player still underground; a player who simply walks away from the building is covered by the 'left the special entirely' branch of the knock EOC instead.",
+    "//4": "THE SEAM - PART 1: THE DESCENT LOOP.  Fired when the player steps on t_scp_087_seam at the bottom of the deepest authored level (z-9).  It increments the loop counter, reads the seam's own position from 'trap_location', and teleports the player back up the shaft.",
+    "//5": "GEOMETRY (verified against mapgen/scp_087_mapgen.json): every overmap tile in this special shares the same absolute x,y column (point [0,0] across all z), and the seam sits at (11,20) on z-9 while layout A's arrival '<' sits at (11,2).  So the re-entry is: z_adjust +8 (z-9 -> z-1) and y_adjust -18 (row 20 -> row 2).  The result is that the player reappears on z-1's up-stairs tile - EXACTLY where a fresh descent from z0 would have put them, which is what makes the loop seamless.",
+    "//5b": "L2 - THE OFFSETS ARE NAMED, NOT SCATTERED: the raw z_adjust/y_adjust pair is applied in exactly ONE place, right here, and its result is written into the context variable scp_087_arrival ('the shaft's top landing, on z-1').  Everything downstream - the descent teleport in the else branch, and both the restore-transform aim and the surface teleport in EOC_SCP_087_EJECT - refers to that named tile instead of repeating 8/-18.  The one remaining literal offset is the single +1 z step from the z-1 landing to the z0 closet ('scp_087_surface'), because the surface is exactly one level above the landing.  If the mapgen geometry ever moves, this comment and the one place are the only things to change.",
+    "//5c": "WHY A CONTEXT VARIABLE: run_eocs passes the parent dialogue's context through to the child (src/npctalk.cpp:6584-6585), and the trap seeds 'trap_location' into context itself (src/trapfunc.cpp:504), so a context var written here is visible both in the seam's own else branch and inside EOC_SCP_087_EJECT when it is run from the loop-13 branch.",
+    "//6": "The previous version used z_adjust +1, which was arithmetically wrong for a ten-level shaft (z-9 + 1 = z-8, not z-1).  Corrected here.",
+    "//7": "The trap delivers 'trap_location' as a context variable (src/trapfunc.cpp:502-505), and EOC_TELEPAD (data/json/traps.json:487) is the precedent for reading it directly with location_variable_adjust and then teleporting to it.",
+    "//8": "B1 DEFENCE IN DEPTH - 'condition': 'u_is_avatar'.  The trap itself already carries AVATAR_ONLY so a monster cannot reach this EOC (see traps/scp_087_traps.json, //5), but this costs one condition evaluation and makes the invariant explicit here: EOC_SCP_087_SEAM mutates the per-world loop counter and teleports THE ACTOR, so it is only ever correct for the player.  'u_is_avatar' is a valid simple-string dialogue condition (src/condition.cpp:2631 registers it; f_is_avatar at :1195-1201) and effect_on_condition::activate consults the condition before the body for EVERY eoc_type, including ACTIVATION (src/effect_on_condition.cpp:370: `if( !has_condition || condition( d_eoc ) )`), so a non-avatar trigger is a no-op.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_087_SEAM",
+    "eoc_type": "ACTIVATION",
+    "condition": "u_is_avatar",
+    "effect": [
+      { "math": [ "scp_087_loops += 1" ] },
+      {
+        "//": "THE ARRIVAL TILE (L2).  trap_location is the seam at (11,20) on z-9; +8 z takes it to z-1 and -18 y takes row 20 to row 2, giving the up-stairs cell (11,2) on z-1.  Written ONCE into the named context variable scp_087_arrival.",
+        "location_variable_adjust": { "context_val": "trap_location" },
+        "z_adjust": 8,
+        "y_adjust": -18,
+        "output_var": { "context_val": "scp_087_arrival" }
+      },
+      {
+        "if": { "math": [ "scp_087_loops >= 13" ] },
+        "then": [ { "run_eocs": [ "EOC_SCP_087_EJECT" ] } ],
+        "else": [
+          { "u_teleport": { "context_val": "scp_087_arrival" }, "force_safe": true },
+          { "if": { "math": [ "scp_087_loops == 5" ] }, "then": [ { "run_eocs": [ "EOC_SCP_087_PHASE5" ] } ] },
+          {
+            "//": "RECURRENCE CUE (M3).  scp_087_archive is 1 once this world has been ejected at least once.  A FIRST visit (archive 0) plays the ordinary turn ambience; a RECURRED visit (archive 1) plays the *_again set, so the descent reads as recognition - 'you have been down this flight before' - rather than replaying the same reveal.  This is the first of the two places scp_087_archive is read (the other is the loop-5 reveal in EOC_SCP_087_PHASE5); it is written in EOC_SCP_087_EJECT.",
+            "if": { "math": [ "scp_087_archive == 1" ] },
+            "then": [ { "u_message": "scp_087_turn_again", "snippet": true, "type": "info" } ],
+            "else": [ { "u_message": "scp_087_turn", "snippet": true, "type": "info" } ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "//": "THE SEAM - PART 2: POINT OF NO RETURN (loop 5).  The way up is gone.  This swaps the up-stairs to t_scp_087_stairs_none (no GOES_UP flag), so pressing ascend does nothing at all - vanilla stairs cannot lie, so the disappearance is represented as genuinely different terrain.  Fires exactly once.",
+    "//2": "RADIUS: u_transform_radius only affects the player's CURRENT z-level (map::transform_radius -> points_in_radius(loc, radi, 0), src/map.cpp:5387-5398 - z-radius hard-coded to 0).  That is sufficient: the shaft's only exit is z-1's '<' tile, and to ascend the player must STAND ON a GOES_UP tile (game::find_stairs, src/game.cpp:9977), so sealing z-1 seals the shaft.",
+    "//3": "The radius must stay small enough that the transform area lies inside the reality bubble - with a huge radius the code takes the else branch (src/npctalk.cpp:4702-4707), loads a distant standalone map tm, and never touches the player's actual level (and trips debugmsg 'transform_radius called for area out of bounds', src/map.cpp:5390).  12 tiles reaches the whole 24x24 shaft level from anywhere on it.",
+    "//4": "This is also the ENCOUNTER WINDOW: the same moment the way up closes, EOC_SCP_087_1_SUMMON places the real mon_scp_087_1 in the shaft.  The pursuer does not exist before loop 5.",
+    "//5": "The reveal line is chosen by the RECURRENCE flag: a first visit (scp_087_archive 0) gets the 'the door is gone' reveal; a world that has already been ejected once (archive 1) gets the *_again variant, where the player is not surprised.  This is the second place scp_087_archive is read (M3).",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_087_PHASE5",
+    "effect": [
+      {
+        "if": { "math": [ "scp_087_archive == 1" ] },
+        "then": [ { "u_message": "scp_087_phase5_again", "snippet": true, "type": "bad" } ],
+        "else": [ { "u_message": "scp_087_phase5", "snippet": true, "type": "bad" } ]
+      },
+      { "u_transform_radius": 12, "ter_furn_transform": "scp_087_remove_exit" },
+      { "run_eocs": [ "EOC_SCP_087_1_SUMMON" ] }
+    ]
+  },
+  {
+    "//": "THE SEAM - PART 3: EJECTION (loop 13).  The stairwell spits the player out.  It is NOT a victory - the player did not reach the bottom, the stairwell rejected them.  The article remains true: descent never succeeds.",
+    "//2": "Payload per the agreed design: teleport to the surface closet, heavy morale penalty, lingering paranoia, and the archive flag set so the anomaly can recur with different first-time cues.  Deliberately non-lethal and never soft-locks.",
+    "//3": "RESET (C3): scp_087_loops is set back to 0 so a later visit starts a fresh descent.  Without this the counter would stay at 13, the very next seam would trigger an instant ejection, and EOC_SCP_087_PHASE5 (loops == 5) could never run again.  scp_087_archive records that the world has been through it before, which is what the recurrence cue reads.  scp_087_paranoia_at is reset with the loop counter (N1) so the next descent's morale ladder starts clean; the lingering -99 morale point from this ejection is separate and deliberate.  scp_087_knock_heard and scp_087_doorway_seen are reset too, so the door's knock and cry play again on a later approach (see scp_087_door.json; the knock EOC also re-arms them when the player walks away from the building without ever being ejected).",
+    "//4": "RESTORE THE EXIT: the loop-5 transform PERSISTS in the map's submaps (mapgen does not re-run on a later visit), so the up-stairs must be put back or the next visit's reversible phase would be dead from the first step.  The restore is aimed at z-1 via target_var (u_transform_radius honours target_var, src/npctalk.cpp:4686-4688), because ejecting teleports the player to z0 first.",
+    "//5": "L2 - NO LITERAL OFFSETS HERE: the seam already computed the z-1 up-stairs cell into the context variable scp_087_arrival (see EOC_SCP_087_SEAM), and run_eocs carries context into this EOC (src/npctalk.cpp:6584-6585).  The restore transform aims at scp_087_arrival directly, and the surface closet is one level above it, captured as scp_087_surface (z_adjust 1, no y move).  The only numbers in this body are the +1 landing->surface step and the transform radius.",
+    "//6": "THE TWO PLAYTEST FIXES IN THIS BODY: (1) scp_087_just_ejected marks this arrival as an ejection rather than an approach, so the knock beat stays silent (see the flag's own comment below); (2) the door is forced open, so the narration's claim about it is true.  Both are in EOC_SCP_087_EJECT's effect list, in that order, around the surface teleport.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_087_EJECT",
+    "effect": [
+      { "u_message": "scp_087_phase13", "snippet": true, "type": "bad" },
+      { "run_eocs": [ "EOC_SCP_087_1_RETIRE" ] },
+      {
+        "u_transform_radius": 12,
+        "ter_furn_transform": "scp_087_restore_exit",
+        "target_var": { "context_val": "scp_087_arrival" }
+      },
+      {
+        "//": "The surface closet is exactly one level above the z-1 landing.  Named here so the teleport below has no bare offsets.",
+        "location_variable_adjust": { "context_val": "scp_087_arrival" },
+        "z_adjust": 1,
+        "output_var": { "context_val": "scp_087_surface" }
+      },
+      {
+        "//": "TELL THE DOOR BEATS THIS IS NOT AN APPROACH (playtest fix).  Learn from the log of the first playtest: the ejection drops the player into z0, and a change of overmap tile is exactly what EOC_SCP_087_DOOR_KNOCK listens for - so being spat out of the stairwell read as walking up to the front door, and the knock fired one line after 'You are standing in the closet'.  This flag is set BEFORE the teleport below, so the knock EOC (which runs from the OMT transition the teleport causes) can tell the two apart, consume the flag and stay quiet.  It is deliberately not cleared here: the knock EOC owns that, and it also clears a stale flag whenever the player leaves the area.",
+        "math": [ "scp_087_just_ejected = 1" ]
+      },
+      { "u_teleport": { "context_val": "scp_087_surface" }, "force_safe": true },
+      {
+        "//": "MAKE 'THE DOOR IS OPEN BEHIND YOU' TRUE (playtest fix).  The narration below asserts it, but nothing opened the door: it was open only if the player had happened to leave it that way, and the player in the first playtest shut it two turns after being ejected - which is precisely the case the line got wrong.  This runs AFTER the teleport, so the player is on z0 and the transform (which is hard-coded to the player's current z, src/map.cpp:5387-5398) lands on the doorway, not on the shaft below.  Offsets are from scp_087_surface (the shaft mouth, (11,2) on z0) to the doorway cell (12,22) in mapgen/scp_087_mapgen.json.",
+        "location_variable_adjust": { "context_val": "scp_087_surface" },
+        "x_adjust": 1,
+        "y_adjust": 20,
+        "output_var": { "context_val": "scp_087_door_here" }
+      },
+      {
+        "u_transform_radius": 1,
+        "ter_furn_transform": "scp_087_open_door",
+        "target_var": { "context_val": "scp_087_door_here" }
+      },
+      {
+        "u_message": "You are standing in the closet.  The door is open behind you, and the world is out there, crawling with things that are not the stairwell.",
+        "type": "good"
+      },
+      {
+        "u_add_morale": "morale_scp_087_paranoia",
+        "bonus": -60,
+        "max_bonus": -99,
+        "duration": "6 hours",
+        "capped": true
+      },
+      { "u_add_effect": "scp_087_paranoia", "duration": "6 hours", "intensity": 30 },
+      { "math": [ "scp_087_archive = 1" ] },
+      { "math": [ "scp_087_loops = 0" ] },
+      { "math": [ "scp_087_paranoia_at = 0" ] },
+      { "math": [ "scp_087_knock_heard = 0" ] },
+      { "math": [ "scp_087_doorway_seen = 0" ] },
+      { "math": [ "scp_087_approach = 0" ] },
+      { "math": [ "scp_087_1_active = 0" ] },
+      { "math": [ "scp_087_1_idle = 0" ] },
+      { "math": [ "scp_087_1_lastloop = 0" ] }
+    ]
+  }
+]

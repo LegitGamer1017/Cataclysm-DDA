@@ -1,0 +1,243 @@
+[
+  {
+    "//": "SCP-087 SNIPPETS.  Snippets give the descent varied prose over repeated firing instead of the same line every time.  They are referenced with { \"u_message\": \"<category>\", \"snippet\": true }.",
+    "//2": "DELIBERATELY NOT using \"same_snippet\": true, even though the plan specified it.  Verified cause: src/npctalk.cpp:5572 stores the chosen snippet id on d.actor(!is_npc) - the BETA talker - and both trap EOCs (src/trapfunc.cpp:506) and RECURRING global EOCs (src/effect_on_condition.cpp:172) construct their dialogue with a nullptr beta.  dialogue::actor(true) with no beta fires debugmsg(\"Tried to use an invalid beta talker\") (src/npctalk.cpp:2706-2711) on every fire.  \"same_snippet\" is for EOCs where the OTHER party is an item (see data/json/items/newspaper.json); it is wrong here.",
+    "//3": "THE *_again CATEGORIES are the RECURRENCE CUES (M3): a world that has already been through SCP-087 (scp_087_archive == 1) plays these instead of the first-time lines above, so a later visit reads as recognition rather than replaying the same reveal.  See effects_on_condition/scp_087_seam.json.",
+    "type": "snippet",
+    "category": "scp_087_cry",
+    "text": [
+      {
+        "id": "scp_087_cry_1",
+        "text": "The crying is coming from below.  It has not gotten any closer, and it has not gotten any farther."
+      },
+      {
+        "id": "scp_087_cry_2",
+        "text": "A child is weeping, far down the shaft.  The sound does not move when you do."
+      },
+      { "id": "scp_087_cry_3", "text": "Somewhere below, the crying falters, as though it has heard you listening." },
+      {
+        "id": "scp_087_cry_4",
+        "text": "The crying is steady, patient, and exactly two hundred meters away.  It has been for some time."
+      },
+      {
+        "id": "scp_087_cry_5",
+        "text": "You realise you have been hearing the crying so long that you stopped noticing it.  It is still there."
+      },
+      {
+        "id": "scp_087_cry_6",
+        "text": "Under your own breathing, the crying keeps its distance - patient as a drip inside a wall."
+      },
+      {
+        "id": "scp_087_cry_7",
+        "text": "It stops when you stop.  It starts again when you move, keeping step two floors down."
+      },
+      {
+        "id": "scp_087_cry_8",
+        "text": "It has been crying long enough that you catch yourself listening for it to take a breath."
+      }
+    ]
+  },
+  {
+    "//": "THE FOUR-ISH LOOP AMBIENCE.  Fired each time the seam returns the player, before the phases bite.",
+    "//2": "POOL GROWN 4 -> 8 (playtest fix, item 3).  This is the single most-repeated category in the mod: EOC_SCP_087_SEAM plays it once per loop, so a full 13-loop descent draws from it thirteen times.  The playtest heard one line four times and another three.  There is no engine-side de-dup available - u_message resolves a CATEGORY through SNIPPET.random_from_category (src/npctalk.cpp:5591), a draw with replacement, and same_snippet cannot be used here (see the header note on this file).  The pool is the lever, so it was doubled, matching scp_087_turn_again below.",
+    "type": "snippet",
+    "category": "scp_087_turn",
+    "text": [
+      { "id": "scp_087_turn_1", "text": "The stair turns, and the dark below is exactly as deep as it was." },
+      { "id": "scp_087_turn_2", "text": "Thirteen steps.  The landing.  The turn.  Thirteen steps." },
+      { "id": "scp_087_turn_3", "text": "You have been down this flight before.  You are almost sure of it." },
+      {
+        "id": "scp_087_turn_4",
+        "text": "The same smear of paint on the same wall.  The same dished step.  You do not remember turning around."
+      },
+      {
+        "id": "scp_087_turn_5",
+        "text": "The wall has been repainted since you last looked at it.  It is exactly the same colour."
+      },
+      {
+        "id": "scp_087_turn_6",
+        "text": "Your footsteps come back off the wall a fraction late, as if the stair were a size too large inside."
+      },
+      {
+        "id": "scp_087_turn_7",
+        "text": "The handrail is cold in the same three places as last time.  You count them without meaning to."
+      },
+      {
+        "id": "scp_087_turn_8",
+        "text": "The turn is exactly where you left it.  The turn is always exactly where you left it."
+      }
+    ]
+  },
+  {
+    "//": "RECURRENCE: the turn cues for a world already through SCP-087.  Same stair, but the dread is recognition now, not discovery.",
+    "//2": "Pool grown 4 -> 8 for the same reason as scp_087_cry (playtest fix, item 3): this category fires once PER LOOP, so it is the most-repeated prose in the mod - a 13-loop descent draws from it thirteen times, and in the playtest a single line came back four times.  u_message has no engine-side de-dup (see this file's header note on same_snippet), so the pool size is the fix: at eight lines each one now lands about once or twice a descent.",
+    "type": "snippet",
+    "category": "scp_087_turn_again",
+    "text": [
+      { "id": "scp_087_turn_again_1", "text": "Thirteen steps, and you knew it would be thirteen before you began to count." },
+      {
+        "id": "scp_087_turn_again_2",
+        "text": "The smear of paint.  You have stood on this exact step before, and you already know what is under it."
+      },
+      {
+        "id": "scp_087_turn_again_3",
+        "text": "The stair turns the way you remember, and remembering is worse than being lost."
+      },
+      {
+        "id": "scp_087_turn_again_4",
+        "text": "You have come back down on purpose.  The stair has not decided yet whether that is allowed."
+      },
+      {
+        "id": "scp_087_turn_again_5",
+        "text": "You count the thirteen steps aloud this time, and the stair lets you finish.  That is the only change."
+      },
+      {
+        "id": "scp_087_turn_again_6",
+        "text": "You know the landing before you reach it.  Knowing does not make it arrive any sooner."
+      },
+      {
+        "id": "scp_087_turn_again_7",
+        "text": "Nothing here has moved since your last descent.  You are the thing that keeps coming back."
+      },
+      {
+        "id": "scp_087_turn_again_8",
+        "text": "The stair is doing this on purpose, and it has stopped pretending otherwise.  So have you."
+      }
+    ]
+  },
+  {
+    "//": "LOOP 5 - POINT OF NO RETURN.",
+    "type": "snippet",
+    "category": "scp_087_phase5",
+    "text": [
+      { "id": "scp_087_phase5_1", "text": "The way back is gone.  You hear knocking from the other side." },
+      {
+        "id": "scp_087_phase5_2",
+        "text": "You climb back to the landing you came from.  There is no door.  There was a door."
+      },
+      {
+        "id": "scp_087_phase5_3",
+        "text": "Something knocks on the far side of a door that is no longer there, unhurried, one to two seconds apart."
+      }
+    ]
+  },
+  {
+    "//": "RECURRENCE: the loop-5 reveal, second time around.  You are not surprised, which is its own kind of horror.",
+    "type": "snippet",
+    "category": "scp_087_phase5_again",
+    "text": [
+      { "id": "scp_087_phase5_again_1", "text": "The way back is gone again.  You knew it would be.  You came down anyway." },
+      {
+        "id": "scp_087_phase5_again_2",
+        "text": "You do not climb to check the door this time.  You remember that there is no door."
+      },
+      {
+        "id": "scp_087_phase5_again_3",
+        "text": "The knocking starts on the far side of a door that is not there, and it sounds like it has been waiting for you to notice."
+      }
+    ]
+  },
+  {
+    "//": "LOOP 13 - EJECTION.",
+    "type": "snippet",
+    "category": "scp_087_phase13",
+    "text": [
+      { "id": "scp_087_phase13_1", "text": "You are falling upward.  The dark pours past you the wrong way." },
+      {
+        "id": "scp_087_phase13_2",
+        "text": "The stairwell has finished with you.  It is very gently putting you back."
+      }
+    ]
+  },
+  {
+    "//": "HALLUCINATION FLAVOUR - short, ambiguous, layered with the real cry so the player cannot tell which cues are true.",
+    "type": "snippet",
+    "category": "scp_087_see",
+    "text": [
+      { "id": "scp_087_see_1", "text": "For just a heartbeat, there is a shape behind you on the stair." },
+      {
+        "id": "scp_087_see_2",
+        "text": "There is a figure two landings down, standing perfectly still.  When you look again there is not."
+      },
+      { "id": "scp_087_see_3", "text": "A face, blank as poured plaster, is gone before you finish turning." }
+    ]
+  },
+  {
+    "//": "BEAT 1 - THE KNOCK.  Fired by EOC_SCP_087_DOOR_KNOCK as you walk up to the closet door, before it is opened.  Purely atmospheric: no effect, no morale, no sound in the world.",
+    "//2": "Deliberately restrained.  The article's knocking is described as unhurried and patient rather than threatening, and that is the note to keep.",
+    "type": "snippet",
+    "category": "scp_087_knock",
+    "text": [
+      {
+        "id": "scp_087_knock_1",
+        "text": "As you reach for the door, something knocks twice on the other side.  Slow.  Unhurried.  Patient."
+      },
+      {
+        "id": "scp_087_knock_2",
+        "text": "Two knocks from inside the closet, a second apart, as though whoever is knocking has all the time in the world."
+      },
+      {
+        "id": "scp_087_knock_3",
+        "text": "The door is shut, and the room behind it is shut and empty, and something in there knocks anyway - politely, twice, and then waits."
+      }
+    ]
+  },
+  {
+    "//": "RECURRENCE: the knock for a world that has already been down SCP-087 (scp_087_archive 1).  Recognition instead of discovery, matching the *_again set used by the seam turn and the loop-5 reveal.",
+    "type": "snippet",
+    "category": "scp_087_knock_again",
+    "text": [
+      {
+        "id": "scp_087_knock_again_1",
+        "text": "The knocking starts before you touch the handle this time.  It knows the sound of your walk."
+      },
+      {
+        "id": "scp_087_knock_again_2",
+        "text": "Two knocks, unhurried, from the far side of a door you have opened before.  It has been waiting to be recognised."
+      },
+      {
+        "id": "scp_087_knock_again_3",
+        "text": "You had almost stopped thinking about the knocking.  It had not stopped thinking about you."
+      }
+    ]
+  },
+  {
+    "//": "BEAT 2 - THE CRY.  Fired by EOC_SCP_087_DOORWAY as you step through the open doorway, which is one step after the handle turns (see that EOC for why the beat rides the tile rather than the opening).",
+    "//2": "The cry must never be positional, because the engine cannot deliver a sound from 200 m below (see the note on EOC_SCP_087_CRY).  These lines place it in prose only - 'somewhere below', 'somewhere the building does not have' - so it stays unfalsifiable.",
+    "type": "snippet",
+    "category": "scp_087_doorway_cry",
+    "text": [
+      {
+        "id": "scp_087_doorway_cry_1",
+        "text": "The door swings in on concrete and dark, and nothing else at all.  Then, from below the floor, a child begins to cry."
+      },
+      {
+        "id": "scp_087_doorway_cry_2",
+        "text": "You pull the door open.  The closet is empty - four walls, no light, no sound.  A moment later, very faint and very far down, a child is crying."
+      },
+      {
+        "id": "scp_087_doorway_cry_3",
+        "text": "Nothing inside but cold air and the smell of old concrete.  Then the crying starts, small and patient, out of somewhere this building does not have."
+      }
+    ]
+  },
+  {
+    "//": "RECURRENCE: the doorway cry, second time around.",
+    "type": "snippet",
+    "category": "scp_087_doorway_cry_again",
+    "text": [
+      {
+        "id": "scp_087_doorway_cry_again_1",
+        "text": "The door opens on the same nothing as before.  You are already listening for the crying, and it does not keep you waiting."
+      },
+      {
+        "id": "scp_087_doorway_cry_again_2",
+        "text": "You know what is inside, so the crying no longer surprises you.  What is left is the part where it does not stop."
+      },
+      {
+        "id": "scp_087_doorway_cry_again_3",
+        "text": "Same concrete.  Same dark.  Same child crying somewhere below.  You came back anyway."
+      }
+    ]
+  }
+]

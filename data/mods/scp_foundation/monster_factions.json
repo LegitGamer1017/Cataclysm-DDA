@@ -1,0 +1,17 @@
+[
+  {
+    "type": "MONSTER_FACTION",
+    "name": "foundation",
+    "//": "SCP Foundation anomalies.  Hostile to the player and humans; by_mood to everything else so it will not brawl with local wildlife while it hunts you.  IMPORTANT: 'neutral' and 'friendly' are asymmetric relationships the engine asserts must be reciprocal (tests/monfactions_test.cpp:64-94 monfactions_reciprocate) - base-game factions like zombie declare only 'by_mood' toward unknown factions, so declaring them neutral here would fail that check.  Leaving them unlisted makes this faction 'by_mood' toward them, which needs no reciprocation.  Do not add 'neutral' entries for base-game factions.",
+    "//2": "NO SELF-ENTRY (B6 FIX).  Do not add 'by_mood': [ 'foundation' ].  monfaction::load fills the attitude map from the JSON lists and only then does `attitude_map.emplace( id, MFA_FRIENDLY )` (src/monfaction.cpp:194-208) - and emplace does NOT overwrite an existing key, so listing the faction in its own by_mood list replaces the engine's friendly-to-self default with a mood-based attitude, and two anomalies of the same faction would treat each other as mood targets instead of allies.  Nothing needs the self-entry: the reciprocity test only inspects friendly/neutral (tests/monfactions_test.cpp:64-94), and 'hate' needs no reciprocation at all.",
+    "hate": [ "player", "human" ]
+  },
+  {
+    "type": "MONSTER_FACTION",
+    "name": "scp_087",
+    "//": "SCP-087-1 and only SCP-087-1.  It hates ONLY the player - it ignores zombies, wildlife, NPCs and pets, because the face exists for the subject alone.  The existing 'foundation' faction is unsuitable: its hate list is [ 'player', 'human' ], which would make 087-1 also hunt NPCs.  This dedicated faction keeps the anomaly player-only.",
+    "//2": "'hate' entries need no reciprocation (only 'neutral'/'friendly' do, tests/monfactions_test.cpp:64-94), so declaring hate for 'player' is safe and does not require the base player faction to reciprocate.",
+    "//3": "NO SELF-ENTRY (B6 FIX): as above, 'by_mood': [ 'scp_087' ] must NOT be added - emplace at src/monfaction.cpp:208 cannot overwrite it, so the self-entry would silently downgrade the faction's attitude toward its own members from friendly to by_mood.  The engine's friendly-to-self default is what we want.",
+    "hate": [ "player" ]
+  }
+]
