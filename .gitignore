@@ -262,3 +262,9 @@ tests/objwin/tiles/pch/tests-pch.hpp.gch
 slope_test_data_*
 swim-*.csv
 weakpoint_hit_distribution.csv
+
+# symlinked mods 
+/data/mods/secronom
+/data/mods/secronom_lore_expansion
+/data/mods/Mining_Mod
+/data/mods/blazemod
