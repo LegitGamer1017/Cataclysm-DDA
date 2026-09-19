@@ -7481,6 +7481,7 @@ iexamine_functions iexamine_functions_from_string( const std::string &function_n
             { "gaspump", { to_translation( "Use gas pump" ), &iexamine::gaspump } },
             { "atm", { to_translation( "Use ATM" ), &iexamine::atm } },
             { "vending", { to_translation( "Use vending machine" ), &iexamine::vending } },
+            { "scp_294", { to_translation( "Use SCP-294" ), &iexamine::scp_294 } },
             { "elevator", { to_translation( "Use elevator" ), &iexamine::elevator } },
             { "controls_gate", { to_translation( "Use control gate" ), &iexamine::controls_gate } },
             { "cardreader_robofac", { to_translation( "Use card reader" ), &iexamine::cardreader_robofac } },

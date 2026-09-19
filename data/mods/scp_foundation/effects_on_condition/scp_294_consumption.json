@@ -1,0 +1,86 @@
+[
+  {
+    "//": "SCP-294 CONSUMPTION EFFECTS.  Every custom liquid the machine can dispense carries a `consumption_effect_on_conditions` pointing here (see items/scp_294_items.json).  These are ordinary EOCs - alpha is the drinker, run on the consume path - modelled on the base game's own inline consumption EOCs (data/json/items/comestibles/dairy.json:148).",
+    "//2": "DESIGN NOTE: hazard here is a SCALD/FREEZE, not a death.  Molten gold and liquid nitrogen hurt badly and can put a careless survivor in real trouble, but the numbers are chosen to wound, not to execute - consistent with how this mod treats its anomalies (severity, not lethality).",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_294_DRINK_JOE",
+    "effect": [
+      { "u_add_effect": "nausea", "duration": "30 minutes" },
+      { "u_message": "You get it down.  You do not get it to stay down.", "type": "bad" }
+    ]
+  },
+  {
+    "//": "MOLTEN GOLD.  The 'cup of gold' gag is deliberately a HAZARD and not a payday: the metal is priced at nothing (price 0 in the item), so it is not a currency faucet, and drinking it is a serious burn.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_294_DRINK_MOLTEN_GOLD",
+    "effect": [
+      { "u_deal_damage": "heat", "amount": 60 },
+      { "u_message": "It goes down like a swallowed coal and keeps going, all the way down.", "type": "bad" }
+    ]
+  },
+  {
+    "//": "LIQUID NITROGEN.  Cold damage plus a long frostbite - the cup is fine, the drinker is not.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_294_DRINK_NITROGEN",
+    "effect": [
+      { "u_deal_damage": "cold", "amount": 40 },
+      { "u_add_effect": "frostbite", "duration": "60 minutes" },
+      {
+        "u_message": "It is not cold so much as it is the end of warmth, and it is going down your throat.",
+        "type": "bad"
+      }
+    ]
+  },
+  {
+    "//": "'SURPRISE ME'.  Water heated past the point of staying water; it flashes to steam and scalds.  Smaller than the gold because the cup barely made it to you.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_294_DRINK_BOILING",
+    "effect": [
+      { "u_deal_damage": "heat", "amount": 25 },
+      { "u_message": "The heat of it arrives before the taste does, and the taste does not arrive.", "type": "bad" }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_294_DRINK_MUSIC",
+    "effect": [
+      { "u_add_effect": "scp_294_rhythm", "duration": "6 hours" },
+      {
+        "u_message": "You are not hearing it.  You are feeling it, and you are already moving to it.",
+        "type": "good"
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_294_DRINK_MEMORY",
+    "effect": [
+      { "u_add_effect": "scp_294_memory", "duration": "12 hours" },
+      { "u_message": "Everything that has ever happened to you arrives at once, and stays.", "type": "info" }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_294_DRINK_MEDICAL",
+    "effect": [
+      { "u_add_effect": "scp_294_medical", "duration": "1 hour" },
+      {
+        "u_message": "You know what to do.  You do not remember learning it, and you will not remember it later.",
+        "type": "good"
+      }
+    ]
+  },
+  {
+    "//": "THE PERFECT DRINK.  The morale point is applied with capped:true so it accumulates linearly; -60 with a -99 floor is a genuinely serious, long mood collapse, and the despair status is the visible half.  NO lethal or self-harm mechanic - the article's outcome is referenced by the flavour, not enacted on the player.",
+    "type": "effect_on_condition",
+    "id": "EOC_SCP_294_DRINK_PERFECT",
+    "effect": [
+      { "u_add_morale": "morale_scp_294_letdown", "bonus": -60, "max_bonus": -99, "duration": "48 hours", "capped": true },
+      { "u_add_effect": "scp_294_despair", "duration": "7 days" },
+      {
+        "u_message": "It is the best thing you have ever tasted.  You already know you will never have it again.",
+        "type": "bad"
+      }
+    ]
+  }
+]

@@ -79,6 +79,37 @@ The threshold refuses companions ("They will not go down there"), and it is **en
 
 ---
 
+## SCP-294 — "The Coffee Machine"
+
+*Object Class: Euclid*
+
+A perfectly ordinary coffee vending machine, except that where the coin slot's brand should be there is a full English QWERTY keyboard. Feed it fifty cents, type the name of **any liquid**, and a paper cup holding one serving of it is dispensed. It will pour water, coffee, sulfuric acid, motor oil, mercury, blood, molten gold — anything that can exist as a liquid. Ask for a diamond, or something it cannot reach, and the pad answers **OUT OF RANGE**.
+
+### How it works in-game
+
+1. **Examine it** (`e`). It wants **fifty cents**, taken from the money on your **cash card**. No card, no money, no drink.
+2. **Type a liquid name** into the touchpad. The machine matches it case-insensitively against **every liquid item in the game** by name (and against a short list of the article's own scripted requests), then dispenses **one serving** (about 250 ml) of that liquid **inside a paper cup**. You are charged only when a cup is actually dispensed.
+3. **Solids and unknowns fail.** Anything that is not a liquid item — "diamond", "a rock", a typo — comes back **OUT OF RANGE**, and costs you nothing.
+4. **It runs out.** After **fifty cups** the machine goes quiet for about **ninety minutes**, then restocks. It will restock a limited number of times, and then it **jams for good**: the cabinet stays, dark and unresponsive, and touching the keyboard tells you so.
+
+### The article's requests
+
+The machine reproduces the article's documented tests, including the ones that aren't really liquids: **a cup of Joe** (it does not mean coffee), **a cup of gold** (molten, and it burns — and it is worth nothing, so it is not a money printer; leave it for ten minutes or so and it **sets into a lump of gold**, which you can break back down into gold for crafting), **liquid nitrogen**, **cup of carbon** (but not a diamond), **the best drink I've ever had**, **the perfect drink** (a long, heavy letdown — a severe mood collapse, never a death), **surprise me**, **Blood of Christ**, **a cup of music**, **my life story**, **a cup of pertinent medical knowledge**, **something Cassy will like**, and **a room-temperature superconductor**. The extinct and extra-dimensional requests — Smilodon blood, passenger-pigeon blood, Thomas Jefferson's blood, anti-water — all return OUT OF RANGE.
+
+### Where to find it
+
+**Very rarely** installed inside ordinary **lab and office interiors** — it is a map extra at the rarest weight the base game itself uses, so most worlds may never show one. It is meant to be found, not shopped for.
+
+### A note on the mod's shape
+
+SCP-294 is the mod's **one C++ feature**. Type-any-liquid requires resolving arbitrary text against the whole item catalog, string matching the JSON dialogue system cannot do (`compare_string` is exact and case-sensitive, and there is no name→id lookup), so the touchpad is a small C++ examine action (`src/scp_294.cpp`, registered as `"scp_294"`). Everything else it needs — the machine, the cup, the dispensed liquids, their effects, the scripted requests, and the placement — is still JSON. See `DEVELOPING.md` §11.
+
+### Attribution
+
+SCP-294 is by far2, licensed **CC BY-SA 3.0**, from the [SCP Wiki](https://scp-wiki.wikidot.com/scp-294).
+
+---
+
 ## Adding a new SCP
 1. **Define the monster** in `monsters/` (see `scp_173.json` for the template).
 2. **Add it to the registry** — `monstergroups/scp_registry.json` (`GROUP_SCP_ALL`) is the canonical index.

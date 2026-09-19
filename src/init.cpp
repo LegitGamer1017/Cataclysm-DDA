@@ -107,6 +107,7 @@
 #include "rotatable_symbols.h"
 #include "scenario.h"
 #include "scent_map.h"
+#include "scp_294.h"
 #include "shop_cons_rate.h"
 #include "skill.h"
 #include "sounds.h"
@@ -497,6 +498,7 @@ void DynamicDataLoader::initialize()
     add( "magic_type", &magic_type::load_magic_type );
     add( "clothing_mod", &clothing_mods::load );
     add( "ter_furn_transform", &ter_furn_transform::load_transform );
+    add( "scp_294_request", &load_scp_294_request );
     add( "event_transformation", &event_transformation::load_transformation );
     add( "event_statistic", &event_statistic::load_statistic );
     add( "score", &score::load_score );
@@ -772,6 +774,7 @@ void DynamicDataLoader::unload_data()
     start_locations::reset();
     ter_furn_migrations::reset();
     ter_furn_transform::reset();
+    reset_scp_294_request();
     trap::reset();
     trap_migrations::reset();
     unload_talk_topics();
@@ -1010,6 +1013,7 @@ void DynamicDataLoader::check_consistency()
             { _( "Cities" ), &city::check_consistency },
             { _( "Overmap specials" ), &overmap_specials::check_consistency },
             { _( "Map extras" ), &MapExtras::check_consistency },
+            { _( "SCP-294 requests" ), &check_scp_294_requests },
             { _( "Scenarios" ), &scenario::check_all },
             { _( "Shop rates" ), &shopkeeper_cons_rates::check_all },
             { _( "Start locations" ), &start_locations::check_consistency },

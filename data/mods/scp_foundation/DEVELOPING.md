@@ -11,18 +11,29 @@ player-facing description of each anomaly.
 
 ## 1. What this is
 
-A Cataclysm: Dark Days Ahead mod adding SCP Foundation anomalies. Two are
+A Cataclysm: Dark Days Ahead mod adding SCP Foundation anomalies. Three are
 implemented:
 
 | SCP | What it is | Impl. status |
 | --- | --- | --- |
 | **SCP-173** | Animate concrete, frozen while observed, invulnerable while observed. | Feature-complete |
 | **SCP-087** | An endless unlit stairwell that loops you forever; a faceless pursuer inside. | Feature-complete |
+| **SCP-294** | A coffee machine that dispenses any liquid you can type. | Implemented, not yet playtested |
 
-Everything is pure JSON. There is **no C++ code** — no `src/` patching. Every
-mechanic is built from the engine's existing hooks (EOCs, `ter_furn_transform`,
-monster special attacks, `MON_AVOID_STRICT`, factions). If you can't express an
-idea with those, the answer is usually a different engine hook, not a code change.
+SCP-173 and SCP-087 are **pure JSON** — no `src/` patching. Every mechanic is
+built from the engine's existing hooks (EOCs, `ter_furn_transform`, monster
+special attacks, `MON_AVOID_STRICT`, factions). If you can't express an idea
+with those, the answer is usually a different engine hook, not a code change.
+
+> **SCP-294 is the one exception, and it is deliberate.** Its entire point is
+> resolving an *arbitrary typed liquid name* against the whole item catalog,
+> case-insensitively — and the JSON dialogue system cannot do that:
+> `compare_string` is exact and case-sensitive (`src/condition.cpp:1798`), there
+> is no name→id lookup, and dialogue math has no string operators
+> (`src/math_parser.cpp:208`). So SCP-294 adds a small C++ examine action
+> (`src/scp_294.cpp`, registered as `"scp_294"`). Everything else it needs — the
+> machine, the cup, the dispensed liquids, their effects, the scripted requests,
+> and the placement — is still JSON. See §11.
 
 Current version: `0.2` (see `modinfo.json`).
 
@@ -74,6 +85,24 @@ All paths are relative to `data/mods/scp_foundation/`.
 | `effects_on_condition/scp_087_paranoia_effect.json` | `scp_087_paranoia` / `scp_087_contact` effects. |
 | `effects_on_condition/scp_087_paranoia_morale.json` | The morale type. |
 | `effects_on_condition/scp_087_companion.json` | "Companions won't go down there." |
+
+### SCP-294 files
+
+| File | Purpose |
+| --- | --- |
+| `src/scp_294.cpp`, `src/scp_294.h` (in the repo's `src/`, **not** the mod) | The C++ examine action: the touchpad, the liquid resolver, the money gate, the restock/jam state machine, and the `scp_294_request` JSON loader. |
+| `furniture_and_terrain/scp_294_furniture.json` | `f_scp_294` (working) and `f_scp_294_dead` (permanently jammed). |
+| `items/scp_294_items.json` | The paper cup and the liquids that have no base-game equivalent, plus the gag drinks. |
+| `effects_on_condition/scp_294_effects.json` | The four drink statuses and the "perfect drink" morale type. |
+| `effects_on_condition/scp_294_consumption.json` | The consumption EOCs hooked to each custom liquid. |
+| `scp_294_requests.json` | The article's scripted requests, as `scp_294_request` objects. |
+| `scp_294_mapgen_extra.json` | The `map_extra` + `update_mapgen` that installs the machine, and the collection extensions that place it. |
+
+> The C++ side is wired by three small edits outside this folder:
+> `src/iexamine.h` (declaration), `src/iexamine.cpp` (the `function_map` entry at
+> `:7475`), and `src/init.cpp` (the `scp_294_request` data loader and its reset).
+> The build has **no file lists to update** — `src/*.cpp` is globbed by every
+> build system in this repo (`src/CMakeLists.txt:16`, `Makefile:1042`).
 
 ---
 
@@ -141,8 +170,10 @@ Each anomaly gets a faction tuned to who it hunts. `scp_087` hates **only**
 ### Registry
 
 `monstergroups/scp_registry.json` (`GROUP_SCP_ALL`) is the canonical list of
-every SCP. Nothing spawns from it — it's an index. Add one line per new SCP and
-keep it in step with the quota sweeps.
+every SCP that exists as a **monster**. Nothing spawns from it — it's an index.
+Add one line per new SCP and keep it in step with the quota sweeps. Anomalies
+that are objects rather than creatures (SCP-294 is a furniture) are deliberately
+not listed here.
 
 ### Spawn rate vs. instance cap — two separate controls
 
@@ -553,13 +584,25 @@ Extension points, with where to look:
   HP**; the only lever is the monster's own `hp` field at load time. Use
   `u_hp('ALL')` for characters, never for monsters.
 - **`looks_like` is cosmetic — and it is how this mod gets tiles.** A grep of `src/`
-  finds `looks_like` **only** in the tile drawer (`src/cata_tiles.cpp:1965`, with the
-  terrain/furniture/monster cases at `:2018-2026` and the overmap case at `:2033`);
-  it never appears in a data loader, so it cannot copy a flag or change behaviour.
-  That is exactly why `t_scp_087_stairs_none` can look like a working staircase
-  without inheriting `GOES_UP`, and why the seam can look identical to the step
-  around it. It is also a *fallback*: if a tileset ever ships art for our own ids,
-  that art wins automatically. Two traps when mapping ids: **map tiles and overmap
+  finds `looks_like` **only** in the tile drawer (`src/cata_tiles.cpp:1965`): the
+  terrain/furniture/field/monster cases at `:2017-2026`, the overmap case at
+  `:2039-2061`, the vehicle-part case at `:2063-2084`, and — easy to miss, and it is
+  the one **items** use — the `ITEM` case at `:2086-2097`, which follows
+  `new_it->looks_like`. It never appears in a data loader, so it cannot copy a flag or
+  change behaviour. That is exactly why `t_scp_087_stairs_none` can look like a working
+  staircase without inheriting `GOES_UP`, and why the seam can look identical to the
+  step around it. It is also a *fallback*: if a tileset ever ships art for our own ids,
+  that art wins automatically.
+
+  Every art-less item in this mod therefore carries one (the SCP-294 liquids point at
+  `water_clean` / `blood` / `cola` / `mercury` / `motor_oil`, the gold lump at
+  `gold_small`, the field log at `paper`). The chain always ends at the tileset's
+  `unknown` tile, and that is **per-tileset**: if the tileset defines none, the loader
+  logs `ERROR … has no 'unknown' tile defined!` at load time
+  (`src/tileset_loader.cpp:476-479`) — a property of the tileset, not of any item, so
+  `looks_like` cannot silence it.
+
+  Two traps when mapping ids: **map tiles and overmap
   tiles come from different tilesets** (here `UltimateCataclysm` for terrain and
   monsters, `Larwick_Overmap` for the overmap), and the overmap target must be a real
   `overmap_terrain` id — `house` and `cabin` do **not** exist as oters, so pointing
@@ -760,9 +803,204 @@ comm -23 /tmp/ref.txt /tmp/def.txt   # referenced-but-undefined ids; should be e
 
 ---
 
-## 11. Attribution
+## 11. SCP-294 architecture (the one C++ feature)
+
+The rest of this mod is data. SCP-294 is the exception, and the reason is narrow:
+it must resolve an arbitrary typed liquid name against the whole item catalog,
+case-insensitively, and JSON cannot do that (`compare_string` is exact and
+case-sensitive, `src/condition.cpp:1798`; there is no name→id lookup; dialogue
+math has no string operators, `src/math_parser.cpp:208`). Everything the feature
+*needs* is JSON; only the touchpad is code.
+
+### The examine action
+
+`f_scp_294` and `f_scp_294_dead` both carry `"examine_action": "scp_294"`. That
+string is resolved by the base game's `function_map`, which we extended with one
+line (`src/iexamine.cpp:7484`; declaration in `src/iexamine.h`):
+
+```cpp
+{ "scp_294", { to_translation( "Use SCP-294" ), &iexamine::scp_294 } },
+```
+
+An **unregistered** `examine_action` string makes `--check-mods` fail
+(`src/iexamine.cpp:7581`), so the JSON and the compiled C++ have to ship
+together — see §10.
+
+### The handler
+
+`iexamine::scp_294` (`src/scp_294.cpp`), in order: recognise the dead cabinet;
+handle an empty machine (restock, or jam for good); require fifty cents of
+`cash_card` charges (`Character::charges_of`, `src/character.h:4079`); open the
+touchpad with `string_input_popup_imgui` — the same widget the debug menus use
+(`src/debug_menu.cpp:1730`); resolve the typed text; then dispense a cup
+(`item::put_in` into the cup, `Character::i_add_or_drop`) or refuse.
+
+### The resolver — "any liquid in the game"
+
+`scp_294_resolve()` checks the scripted table first, then tries the text as a
+literal item id, then searches **every liquid item**:
+
+```cpp
+for( const itype *t : item_controller->all() ) {
+    if( t->phase != phase_id::LIQUID ) { continue; }  // solids can never resolve
+    // match t->nname( 1 ) against the query, case-insensitively
+}
+```
+
+An exact name match wins; otherwise the best substring match (`lcmatch`,
+`src/cata_utility.h:115`), ties broken toward drinks and shorter names. A failure
+returns a null id, which the handler renders as **OUT OF RANGE**. Because the
+filter is `phase == LIQUID`, a request for a solid ("diamond") fails naturally and
+needs no entry — the article's own rule, enforced by the same test the engine uses
+everywhere else. There is no curated liquid list: every liquid the game defines is
+reachable.
+
+### The pour, the cup, and the cooling gold
+
+The pour is `item::fill_with` (`src/scp_294.cpp`) — the engine's own "fill this
+container" helper. It caps what goes in by the cup's remaining **volume and
+weight** (`item_container.cpp:831-840`) and returns the charges it took. Its
+`amount` argument is what makes the machine pour **one serving**
+(`scp_294_serving_volume = 250_ml`, the base game's standard drink) instead of
+filling the cup.
+
+Two numbers therefore matter, and they have to agree:
+
+- **The cup** (`items/scp_294_items.json`) is 500 ml / 10 kg, deliberately
+  *oversized*. An indivisible 400–500 ml charge (bee's knees, bark tea, three
+  sisters stew) cannot be poured into a 12 oz cup at all, and `amount` is floored
+  at 1, so those simply pour their single charge — still about a serving. The
+  10 kg ceiling sits above the densest real liquid (a 250 ml serving of mercury
+  is ~3.4 kg).
+- **The gold lump** is a *literal* 2500 g — one 250 ml charge of
+  `scp_294_molten_gold` — while the pour is *computed*. That is a coupling, and
+  `tests/scp_294_test.cpp` enforces it: the test mirrors the machine, sums the
+  mass poured, and fails if the two ever stop matching.
+
+**`scp_294_molten_gold` cools.** It is a comestible, and *every* comestible
+without `NO_TEMP` is created **already active**: `item::has_temperature()` is
+`is_comestible() && !NO_TEMP` (`src/item.cpp:3190-3192`) and the item
+constructor sets `active = true` on that branch (`src/item.cpp:257-259`). That is
+what lets the expiry — which lives inside `if( active )` (`src/item.cpp:4770-4785`)
+— run at all. It carries a `countdown_interval`, and on expiry `countdown_action`
+converts it into `scp_294_gold_lump` (the transform replaces the item **in
+place**, `item_transformation.cpp:59`). Comestibles are processed every ten
+minutes (`src/item.cpp:4183-4184`), so a "10 minutes" countdown sets the gold
+somewhere in the **10–20 minute** range.
+
+> **Do not add `SPAWN_ACTIVE` here** — it was there once and was dead weight.
+> The flag calls `item::activate()` at construction (`src/item.cpp:204-206`), but
+> `activate()` early-returns when the item is already active (`src/item.cpp:481-483`)
+> and comestibles already are. A live save showed the mod's *other* comestibles
+> stored as `active = true` with no such flag, which is what exposed the wrong
+> assumption. The real lever is being a comestible, plus the `countdown_action`.
+
+It is not kept hot forever on purpose: addendum
+294m establishes that the machine *retrieves* matter, and once the gold is in
+your hands ordinary physics resumes. `recipes/scp_294_recipes.json` uncrafts the
+lump back into `gold_small`, which is what makes it usable in every recipe that
+wants gold (base and mod) without editing a single recipe — a mod cannot extend
+a recipe's `components`, since they load through `item_components`, which has no
+`extend` handling.
+
+### The scripted requests — a `scp_294_request` table
+
+The article's documented tests and gags live in `scp_294_requests.json` as a small
+data type the C++ loads, so adding or retuning one is a JSON edit, not a rebuild.
+`src/init.cpp` registers the loader (`add( "scp_294_request", ... )`) and its
+reset. Schema:
+
+```json
+{ "type": "scp_294_request", "id": "scp_294_req_joe",
+  "match": [ "cup of joe", "joe" ],
+  "item": "scp_294_joe", "message": "optional flavour",
+  "response": "OUT OF RANGE" }
+```
+
+`item` dispenses that item in a cup; `response` (used for anti-water and the
+extinct-species requests) dispenses nothing. Every `match` phrase is
+lower-cased on load, so entries read naturally. The table is checked *before*
+the generic resolver, so a scripted phrase always wins.
+
+### State, restock and the jam
+
+Per-machine state lives in the **world globals** — the same store JSON
+`global_val` uses (`get_globals()`, `src/global_vars.h`) — keyed by the machine's
+absolute position so two machines do not share one counter:
+`scp_294_pours@x_y_z`, `scp_294_empty_at@x_y_z`, `scp_294_cycles@x_y_z`. The
+permanent dead state is the **furniture id** `f_scp_294_dead`, written with
+`map::furn_set` — per-tile and save-safe with no new serialization, the same
+idiom as the base game's `f_vending_c` / `f_vending_c_off` pair. Drop the
+position suffix if you want all machines to share one counter instead.
+
+The tunables are at the top of `src/scp_294.cpp`: `scp_294_cost = 50` (cents),
+`scp_294_pours_per_cycle = 50`, `scp_294_restock_turns = 90 * 60` (≈90 minutes;
+1 turn = 1 s), `scp_294_max_cycles = 3` — the machine jams for good after three
+cycles — and `scp_294_serving_volume = 250_ml`, the size of one pour. Change that
+last one and the gold lump's literal weight stops matching the pour: the coupling
+test described above is what catches it.
+
+### Placement
+
+A second `"type": "mapgen"` for a lab's `om_terrain` does **not** inject — all
+entries for an oter are a weighted lottery and exactly one is chosen, so yours
+would *replace* the lab (`src/mapgen.cpp:508-530`). The one clean injection is a
+`map_extra` whose generator is an `update_mapgen` overlay, attached to the
+building's existing extras collection with `map_extra_collection` `copy-from` +
+`extend` (the CrazyCataclysm / MindOverMatter pattern). `scp_294_mapgen_extra.json`
+defines the overlay, the extra, and extensions to the labs'
+`research_facility_interior` and the offices' `build` collections at weight **1**
+— the rarest tier the base game itself uses (its own rarest extra,
+`mx_jabberwock`, is also 1). The overlay forces the floor tile under the machine
+so it is never embedded in a wall; the fixed coordinate `(11, 11)` is the one
+thing to retune if a particular layout makes it look wrong.
+
+---
+
+## 12. Attribution
 
 Content is derived from [SCP-173](https://scp-wiki.wikidot.com/scp-173) and
 [SCP-087](https://scp-wiki.wikidot.com/scp-087), both licensed **CC BY-SA 3.0**.
 See [`README.md`](README.md) for full credits. This mod is for personal use and
 is not redistributed.
+
+---
+
+## 13. Evaluated and rejected
+
+Anomalies that were designed and consciously **not** built, recorded so the
+research is not repeated.
+
+### SCP-500 — the panacea pills *(rejected)*
+
+SCP-500 is a small can of red pills that cures the taker of all diseases. It was
+worked up as a pure-JSON feature (an item with `consumption_effect_on_conditions`,
+a `removes_effects` cure effect, and a rare lab `map_extra` placement) and then
+**rejected as redundant**: the base game already ships a full cure-all, built the
+same way.
+
+- The `panacea` item (`data/json/items/comestibles/med.json:2262`) applies the
+  `cureall` effect (`data/json/effects.json:3628`), which is a `removes_effects`
+  list — the exact mechanism a JSON SCP-500 would use. It also applies the
+  `panacea` effect (`:4752`), which is *hard-coded* to guarantee bite/infection
+  recovery (`src/player_hardcoded_effects.cpp:1489`, `:1544`).
+- It is not craftable in vanilla — only the MindOverMatter mod adds a recipe
+  (`data/mods/MindOverMatter/recipes/medical.json:93`) — and it spawns only as a
+  ~1% weight entry in the `chem_lab` group
+  (`data/json/itemgroups/science_and_tech.json:262`).
+- Two **more accessible** partial cures already exist: the RX12 jet injector
+  (`jetinjector` effect, `data/json/effects.json:3679`) and the `bio_blood_filter`
+  CBM (`data/json/effects_on_condition/bionic_active_eocs.json:79-126`).
+
+A naive SCP-500 is therefore a panacea reskin, differing only in quantity and
+fiction. It earns a place only if the mod later adds a disease of its own
+(SCP-008, SCP-409) for which it is the *sole* cure — revisit then, not before.
+
+If it is ever revisited, two design notes from the discarded build survive:
+
+- The cure is a multi-hour marker effect whose `removes_effects` list does the
+  work on the next tick (the `cureall` idiom above) — there is no remove-all or
+  remove-by-category primitive anywhere in the engine.
+- `blind` must be **excluded** from any such list in this mod: the base `cureall`
+  includes it, but here blindness is SCP-173's core mechanic, and a cure that
+  granted 2 hours of immunity to it would spend that anomaly.

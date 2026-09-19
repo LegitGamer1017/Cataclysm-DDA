@@ -1,0 +1,56 @@
+[
+  {
+    "//": "SCP-294, THE COFFEE MACHINE.  A perfectly ordinary vending machine except for the entry touchpad, which is a full English QWERTY keyboard.  Examine it and the C++ handler iexamine::scp_294 (src/scp_294.cpp) takes over: it charges fifty cents, lets you type the name of any liquid in the game, and dispenses that liquid in a paper cup.  Solids and unknown requests come back OUT OF RANGE.",
+    "//2": "THE TILE IS THE MACHINE'S VISIBLE STATE.  f_scp_294 is the working unit; f_scp_294_dead is the same cabinet after it has restocked its last cycle and jammed for good.  The handler checks the furniture id first and, when its restock limit is reached, writes f_scp_294_dead with map::furn_set - so the death is per-tile and saved with the furniture array, needing no extra bookkeeping.  The working/off pair is the same idiom the base game uses for f_vending_c / f_vending_c_off.",
+    "//3": "BOTH VARIANTS KEEP examine_action 'scp_294' ON PURPOSE.  The dead cabinet still has to answer when you touch the touchpad (\"the machine is dead\"), so that branch lives in C++, not in the absence of an action.",
+    "type": "furniture",
+    "id": "f_scp_294",
+    "name": "SCP-294",
+    "looks_like": "f_vending_c",
+    "symbol": "{",
+    "description": "An ordinary coffee vending machine, save for the entry panel where the coin slot's brand should be: a full English QWERTY keyboard, worn smooth in the middle of the keys.  Something inside it is humming, very quietly, and has been for longer than the power has been out.",
+    "color": "light_cyan",
+    "move_cost_mod": -1,
+    "coverage": 90,
+    "required_str": 12,
+    "mass": "350 kg",
+    "flags": [ "SEALED", "PLACE_ITEM", "CONTAINER", "BLOCKSDOOR", "MINEABLE", "TRANSPARENT" ],
+    "examine_action": "scp_294",
+    "bash": {
+      "str_min": 20,
+      "str_max": 40,
+      "sound": "glass breaking!",
+      "sound_fail": "whack!",
+      "sound_vol": 16,
+      "sound_fail_vol": 12,
+      "furn_set": "f_scp_294_dead",
+      "items": [ { "item": "glass_shard", "count": [ 25, 50 ] } ]
+    }
+  },
+  {
+    "//": "THE DEAD CABINET.  Reached when the machine exhausts its last restock cycle (scp_294_max_cycles in src/scp_294.cpp), or when someone bashes the working unit hard enough.  It is deliberately still examineable: the handler recognises this id and answers with the 'dead touchpad' line rather than doing anything.",
+    "type": "furniture",
+    "id": "f_scp_294_dead",
+    "name": "SCP-294",
+    "looks_like": "f_vending_c",
+    "symbol": "{",
+    "description": "The coffee machine is quiet.  The keyboard is dark, the coin slot is a slot, and whatever was humming inside it has stopped.  It is a vending machine now, and nothing more.",
+    "color": "dark_gray",
+    "move_cost_mod": -1,
+    "coverage": 90,
+    "required_str": 12,
+    "mass": "350 kg",
+    "flags": [ "SEALED", "PLACE_ITEM", "CONTAINER", "BLOCKSDOOR", "MINEABLE", "TRANSPARENT" ],
+    "examine_action": "scp_294",
+    "bash": {
+      "str_min": 20,
+      "str_max": 40,
+      "sound": "glass breaking!",
+      "sound_fail": "whack!",
+      "sound_vol": 16,
+      "sound_fail_vol": 12,
+      "furn_set": "f_vending_o",
+      "items": [ { "item": "glass_shard", "count": [ 25, 50 ] } ]
+    }
+  }
+]

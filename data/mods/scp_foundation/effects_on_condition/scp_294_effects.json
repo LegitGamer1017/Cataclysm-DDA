@@ -1,0 +1,54 @@
+[
+  {
+    "//": "SCP-294 DRINK EFFECTS.  Four statuses the machine's stranger outputs can leave on the drinker.  All are purely descriptive (no base_mods): the article's effects are psychological and qualitative, and the mechanical weight of the dark ones is the morale point applied by the EOCs in scp_294_consumption.json.",
+    "type": "effect_type",
+    "id": "scp_294_rhythm",
+    "name": [ "Borrowed rhythm" ],
+    "desc": [
+      "Something in you is keeping time, and it is better at it than you are.  You move a little more like water than you used to."
+    ],
+    "show_in_info": true,
+    "rating": "good",
+    "max_intensity": 1
+  },
+  {
+    "//": "'MY LIFE STORY' - the article's Dr.████████ remembered everything that had ever happened to him.  A total-recall status, and the reason he came back 48 hours later with a 538-page autobiography.",
+    "type": "effect_type",
+    "id": "scp_294_memory",
+    "name": [ "Total recall" ],
+    "desc": [
+      "Everything is there.  All of it, at once, in order, and none of it will go quiet.  You remember the exact temperature of afternoons you had forgotten you had."
+    ],
+    "show_in_info": true,
+    "rating": "good",
+    "max_intensity": 1
+  },
+  {
+    "//": "'PERTINENT MEDICAL KNOWLEDGE' - the article's agent could suddenly practise Foundation medicine, and lost it again afterwards.  'Afterwards' is what a timed effect is.",
+    "type": "effect_type",
+    "id": "scp_294_medical",
+    "name": [ "Borrowed training" ],
+    "desc": [ "Your hands know what to do and you do not know how you know.  The knowledge is exact, professional, and borrowed." ],
+    "show_in_info": true,
+    "rating": "good",
+    "max_intensity": 1
+  },
+  {
+    "//": "'THE PERFECT DRINK' - the article's subject drank it, could never have it again, and left a note reading 'at this point everything's just one big letdown.'  Kept as a long, heavy status rather than anything lethal.",
+    "type": "effect_type",
+    "id": "scp_294_despair",
+    "name": [ "One big letdown" ],
+    "desc": [
+      "You have had the best thing you will ever taste, and now everything else is just something you are doing until you stop.  The feeling does fade.  It takes its time."
+    ],
+    "show_in_info": true,
+    "rating": "bad",
+    "max_intensity": 1
+  },
+  {
+    "//": "The morale point for 'the perfect drink'.  Applied with capped:true (linear accumulation, src/morale.cpp:195-204) so it genuinely reaches the floor; the status above is the visible half.",
+    "type": "morale_type",
+    "id": "morale_scp_294_letdown",
+    "text": "The perfect drink"
+  }
+]

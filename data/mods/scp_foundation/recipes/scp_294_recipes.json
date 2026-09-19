@@ -1,0 +1,13 @@
+[
+  {
+    "//": "REDUCING THE GOLD LUMP.  Mirrors the base game's own gold-form deconstruction (data/json/uncraft/resources/metal.json:190-197, where a 1 L gold ingot uncrafts into 1000 gold_small with a hammer and a saw).  This is what makes the lump usable in every recipe that wants gold - base and mod alike - without editing a single recipe.",
+    "//2": "WHY AN UNCRAFT RATHER THAN A RECIPE COMPONENT.  Base recipes name gold_small directly (e.g. gold_ring, gold_necklace, crown_golden_survivor, the shot loads), and a mod cannot extend a recipe's components: recipe 'components' are loaded through item_components, which has no extend handling (unlike 'using' requirements, which aftershock_exoplanet does extend).  Adding the lump to those recipes would therefore mean duplicating each recipe wholesale.  Reducing the lump to gold_small is the base game's own answer for a new gold form.",
+    "//3": "THE YIELD FOLLOWS THE LUMP.  One serving of molten gold sets into a 2500 g lump, and gold_small is 19 g each, so 130 is a ~1.2% loss - the same order as the base game's own ingot reduction (a 1 L ingot is 19320 g into 1000 gold_small, ~1.7%).  If the lump's weight changes, tests/scp_294_test.cpp fails first; this number is the thing to update with it.",
+    "result": "scp_294_gold_lump",
+    "type": "uncraft",
+    "activity_level": "MODERATE_EXERCISE",
+    "time": "20 m",
+    "qualities": [ { "id": "HAMMER", "level": 2 }, { "id": "SAW_M", "level": 2 } ],
+    "components": [ [ [ "gold_small", 130 ] ] ]
+  }
+]

@@ -75,6 +75,7 @@
     "type": "ITEM",
     "id": "scp_087_field_log",
     "name": { "str_sp": "Foundation field log" },
+    "looks_like": "paper",
     "description": "A Foundation field log, water-stained and dog-eared, the survey notes giving way over four pages to a hand that is no longer steady.\n\n'Third descent.  The treads are dished the same way.  Same smear of paint at shoulder height, same hairline crack in the fourth step.  I have started marking the wall in chalk to settle it.  The marks are not there when I come back down.'\n\n'Fifth.  Thirteen steps, then the landing, then thirteen more.  I have counted to two hundred and forty and the flight is exactly as long as it was at the top.  The cable at the doorframe is still live - I can hear the relay click through the concrete, so the surface is up there.  Up is simply not where the stairs go any more.'\n\n'Eighth.  I want to write down that I am not frightened, for whoever finds this, and I cannot make myself write it.'\n\n'The crying has not come any closer.  It is not the crying I am listening for now.'",
     "symbol": ",",
     "color": "white",

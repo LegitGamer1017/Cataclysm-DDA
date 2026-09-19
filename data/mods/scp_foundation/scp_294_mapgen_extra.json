@@ -1,0 +1,40 @@
+[
+  {
+    "//": "SCP-294 PLACEMENT - VERY RARE, INSIDE EXISTING LABS AND OFFICES.  The machine does not get an overmap special of its own; it is injected into buildings that are already generated, the way the base game scatters map extras through a building's interior.",
+    "//2": "HOW THE INJECTION WORKS.  A mapgen entry with the same om_terrain as a base building does NOT overlay it - it competes with it in a weighted lottery and REPLACES it when chosen (src/mapgen.cpp:508-530).  So the only clean injection is a map_extra whose generator is an update_mapgen: the map_extra is rolled during the building's own generation and its update_mapgen overlay is applied on top of the finished map.  This is exactly how mx_lab_concourse_area works (data/json/overmap/map_extras.json:255 with its updater in data/json/mapgen/map_extras/lab_extras.json).",
+    "//3": "RARITY - THE ACTUAL ODDS.  Per eligible map tile: one_in( collection.chance ) x ( our weight / sum of the weights valid at that z ); the one_in and the weighted pick are src/mapgen.cpp:295-296, and out-of-z extras are dropped by filtered_by at src/regional_settings.cpp:853-867.  Our weight is 1 in both pools and the pool totals are pinned by tests/scp_294_test.cpp.  LAB INTERIORS: chance 2, pool total 23752 (every base entry includes z0), so 1_in(2) x 1/23752 = 1 in ~47,500 lab-interior tiles - exactly the odds of the base game's own rarest lab extra, mx_jabberwock, which is also weight 1.  CITY BUILDINGS: chance 90; the stored pool totals 221, but mx_house_spider (weight 40) is basement-only (min_max_zlevel [-1,-1]) and drops out at z0, leaving 181, so 1_in(90) x 1/181 = 1 in ~16,300 building tiles.  Net effect: most worlds will never generate one.  Raise this weight to make it more common - at small weights the odds scale roughly linearly (e.g. 25 makes it about 25x more likely).",
+    "//4": "TUNING NOTE.  The machine is placed at a fixed coordinate (11,11) with the floor forced under it, so it is always reachable rather than embedded in a wall.  If a particular lab or office layout makes that coordinate look wrong, adjust x/y here (or spread it with a range) - the update_mapgen is the only place the coordinate lives.",
+    "type": "mapgen",
+    "update_mapgen_id": "scp_294_install",
+    "object": {
+      "place_terrain": [ { "ter": "t_floor", "x": 11, "y": 11 } ],
+      "place_furniture": [ { "furn": "f_scp_294", "x": 11, "y": 11 } ]
+    }
+  },
+  {
+    "//": "The map_extra itself.  Its 'generator' points at the update_mapgen above; the base game calls it when this extra is rolled for a tile.",
+    "id": "mx_scp_294",
+    "type": "map_extra",
+    "name": { "str": "Coffee machine" },
+    "description": "A vending machine stands against the wall, humming softly to itself.",
+    "generator": { "generator_method": "update_mapgen", "generator_id": "scp_294_install" },
+    "min_max_zlevel": [ 0, 0 ],
+    "sym": "M",
+    "color": "light_cyan",
+    "autonote_visibility": "same_tile"
+  },
+  {
+    "//": "LABS.  research_facility_interior is the extras collection attached to lab overmap terrains (data/json/overmap/overmap_terrain/overmap_terrain_lab.json); copy-from + extend adds our extra to the base list rather than replacing it (the CrazyCataclysm / MindOverMatter pattern).",
+    "type": "map_extra_collection",
+    "id": "research_facility_interior",
+    "copy-from": "research_facility_interior",
+    "extend": { "extras": [ [ "mx_scp_294", 1 ] ] }
+  },
+  {
+    "//": "OFFICES AND OTHER CITY BUILDINGS.  'build' is the collection offices and similar interiors draw their extras from.  Weight 1 against base weights of 5..40 keeps it a genuine rarity.",
+    "type": "map_extra_collection",
+    "id": "build",
+    "copy-from": "build",
+    "extend": { "extras": [ [ "mx_scp_294", 1 ] ] }
+  }
+]

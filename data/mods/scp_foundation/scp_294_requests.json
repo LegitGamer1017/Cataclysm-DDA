@@ -1,0 +1,153 @@
+[
+  {
+    "//": "SCP-294 SPECIAL REQUESTS.  These are the article's documented tests and gags.  The C++ handler (src/scp_294.cpp) checks this table BEFORE the generic resolver, so a scripted phrase always wins; anything not listed here falls through to a case-insensitive search of every liquid item in the game by display name.  The loader lower-cases every 'match' phrase, so entries here may be written in normal case.",
+    "//2": "TWO KINDS OF ENTRY.  With 'item' the machine dispenses that item in a cup (and 'message' is optional flavour shown afterwards).  With 'response' the machine dispenses NOTHING at all - used for the article's OUT OF RANGE results - and no money is charged.",
+    "//3": "SOLIDS NEED NO ENTRY.  The article's 'diamond' test is handled by the generic resolver automatically, because it only ever considers items whose phase is LIQUID, so anything solid simply fails to resolve and comes back OUT OF RANGE.",
+    "type": "scp_294_request",
+    "id": "scp_294_req_joe",
+    "match": [ "cup of joe", "a cup of joe", "joe", "a cup of joe please" ],
+    "item": "scp_294_joe",
+    "message": "The machine hums, and the cup it hands you is warm, and red."
+  },
+  {
+    "//": "ADDENDUM [SCP-294i]: 'cup of gold' dispensed molten gold.  The hazard that makes this a gag and not a money printer lives on the item (price 0) and in its consumption EOC.",
+    "type": "scp_294_request",
+    "id": "scp_294_req_gold",
+    "match": [ "cup of gold", "a cup of gold", "gold", "molten gold", "liquid gold", "cup of molten gold" ],
+    "item": "scp_294_molten_gold",
+    "message": "The cup comes out glowing, and the paper does not care at all."
+  },
+  {
+    "//": "ADDENDUM [SCP-294k]: the machine will not produce a diamond, because a diamond is not a liquid - but it WILL produce liquid carbon when asked for carbon.  That is the whole joke, and it is preserved here.",
+    "type": "scp_294_request",
+    "id": "scp_294_req_carbon",
+    "match": [ "cup of carbon", "a cup of carbon", "carbon", "liquid carbon" ],
+    "item": "scp_294_liquid_carbon"
+  },
+  {
+    "//": "ADDENDUM [SCP-294af] and the 'non-consumable liquids' list from the Description: liquid nitrogen.  The base game has no liquid-nitrogen item, so the machine carries its own.",
+    "type": "scp_294_request",
+    "id": "scp_294_req_nitrogen",
+    "match": [ "liquid nitrogen", "nitrogen", "cup of nitrogen", "a cup of nitrogen", "ln2" ],
+    "item": "scp_294_liquid_nitrogen"
+  },
+  {
+    "//": "ADDENDUM [SCP-294j]: 'cup of anti-water' produced OUT OF RANGE - the machine has a limited range and cannot reach alternate realities.  A refusal, so the machine dispenses nothing and charges nothing.",
+    "type": "scp_294_request",
+    "id": "scp_294_req_antiwater",
+    "match": [ "cup of anti-water", "a cup of anti-water", "anti-water", "antiwater", "anti water" ],
+    "response": "OUT OF RANGE"
+  },
+  {
+    "//": "ADDENDUM [SCP-294q-01]: 'the perfect drink'.  Requesting it again is 'highly discouraged' in the article; here it costs a long, heavy morale collapse.",
+    "type": "scp_294_request",
+    "id": "scp_294_req_perfect",
+    "match": [ "the perfect drink", "perfect drink" ],
+    "item": "scp_294_perfect_drink"
+  },
+  {
+    "//": "ADDENDUM [SCP-294o-01] / [294o-01a]: 'the best drink I've ever had'.  The article's machine reads the subject's memory; it cannot here, so it hands over a strong drink and lets the fiction do the work.",
+    "type": "scp_294_request",
+    "id": "scp_294_req_best",
+    "match": [
+      "the best drink i've ever had",
+      "the best drink ive ever had",
+      "best drink i've ever had",
+      "the best drink",
+      "my favourite drink",
+      "my favorite drink"
+    ],
+    "item": "scp_294_best_drink"
+  },
+  {
+    "//": "ADDENDUM [SCP-294ad]: 'surprise me' produced ordinary water heated to about 200 C, which turned to steam in transit and sprayed boiling water.  The punchline is the surprise.",
+    "type": "scp_294_request",
+    "id": "scp_294_req_surprise",
+    "match": [ "surprise me", "surprise" ],
+    "item": "scp_294_boiling_water",
+    "message": "The machine considers this, and dispenses what is, unmistakably, a cup of water."
+  },
+  {
+    "//": "ADDENDUM [SCP-294af]: 'Blood of Christ' produced the message 'Hic est enim Calix Sánguinis mei' and about 0.12 litres of red grape wine.",
+    "type": "scp_294_request",
+    "id": "scp_294_req_christ",
+    "match": [ "blood of christ", "the blood of christ" ],
+    "item": "wine_cabernet",
+    "message": "Hic est enim Calix Sánguinis mei."
+  },
+  {
+    "//": "ADDENDUM [SCP-294w]: 'a cup of music' tasted vaguely alcoholic and left the subject feeling a continuous rhythm he could dance to.",
+    "type": "scp_294_request",
+    "id": "scp_294_req_music",
+    "match": [ "cup of music", "a cup of music", "music" ],
+    "item": "scp_294_music"
+  },
+  {
+    "//": "ADDENDUM [SCP-294ac]: 'my life story' - the machine shook for three minutes and produced a viscous black liquid; the doctor remembered everything and wrote 538 pages.",
+    "type": "scp_294_request",
+    "id": "scp_294_req_lifestory",
+    "match": [ "my life story", "life story", "a cup of my life story" ],
+    "item": "scp_294_life_story"
+  },
+  {
+    "//": "ADDENDUM [SCP-294ab]: 'a cup of pertinent medical knowledge', which the article suggests was the machine protecting itself during a breach.",
+    "type": "scp_294_request",
+    "id": "scp_294_req_medical",
+    "match": [
+      "a cup of pertinent medical knowledge",
+      "cup of pertinent medical knowledge",
+      "pertinent medical knowledge",
+      "medical knowledge",
+      "cup of medical knowledge"
+    ],
+    "item": "scp_294_medical_knowledge"
+  },
+  {
+    "//": "ADDENDUM [SCP-294t-01]: 'something Cassy will like' produced an empty cup printed with a chocolate banana milkshake, which SCP-085 judged delicious.  There is no Cassy here, so the machine simply makes the milkshake.",
+    "type": "scp_294_request",
+    "id": "scp_294_req_cassy",
+    "match": [ "something cassy will like", "something cassy would like", "something cassy likes" ],
+    "item": "milkshake_choc",
+    "message": "The cup is printed with a picture of a soda fountain glass.  The picture is the only part that is not real."
+  },
+  {
+    "//": "ADDENDUM [SCP-294ai]: 'a cup of room-temperature superconductor' produced a cup of apple juice with seeds floating in it.  The machine has a sense of humour, or a limit.",
+    "type": "scp_294_request",
+    "id": "scp_294_req_superconductor",
+    "match": [
+      "room-temperature superconductor",
+      "room temperature superconductor",
+      "a cup of room-temperature superconductor",
+      "superconductor"
+    ],
+    "item": "juice",
+    "message": "There are seeds floating in it."
+  },
+  {
+    "//": "ADDENDUM [SCP-294h]: 'a cup of SCP-075's secretion' - a caustic basic solution.  Mapped to the game's lye.",
+    "type": "scp_294_request",
+    "id": "scp_294_req_075",
+    "match": [ "a cup of scp-075's secretion", "cup of scp-075's secretion", "scp-075's secretion", "scp-075 secretion" ],
+    "item": "lye",
+    "message": "The cup comes out cold and faintly slippery, and somewhere a containment alarm that is not here begins, very quietly, to sound."
+  },
+  {
+    "//": "ADDENDUM [SCP-294ag]: 'cup of Smilodon blood', 'cup of passenger pigeon blood' and 'cup of Thomas Jefferson's blood' all returned OUT OF RANGE.  The article's explanation is range and extinction, not impossibility.",
+    "type": "scp_294_request",
+    "id": "scp_294_req_smilodon",
+    "match": [ "cup of smilodon blood", "smilodon blood", "smilodon", "a cup of smilodon blood" ],
+    "response": "OUT OF RANGE"
+  },
+  {
+    "type": "scp_294_request",
+    "id": "scp_294_req_pigeon",
+    "match": [ "cup of passenger pigeon blood", "passenger pigeon blood", "passenger pigeon", "a cup of passenger pigeon blood" ],
+    "response": "OUT OF RANGE"
+  },
+  {
+    "type": "scp_294_request",
+    "id": "scp_294_req_jefferson",
+    "match": [ "cup of thomas jefferson's blood", "thomas jefferson's blood", "thomas jeffersons blood", "jefferson's blood" ],
+    "response": "OUT OF RANGE"
+  }
+]
