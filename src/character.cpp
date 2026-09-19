@@ -98,6 +98,7 @@
 #include "stomach.h"
 #include "string_formatter.h"
 #include "submap.h"  // IWYU pragma: keep
+#include "temp_crafting_inventory.h"
 #include "translation.h"
 #include "translations.h"
 #include "trap.h"
@@ -3846,25 +3847,44 @@ bool Character::sees_with_specials( const Creature &critter ) const
 bool Character::pour_into( item_location &container, item &liquid, bool ignore_settings,
                            bool silent )
 {
-    std::string err;
+    rem_cap_return err = rem_cap_return::SUCCESS;
     int max_remaining_capacity = container->get_remaining_capacity_for_liquid( liquid, *this, &err );
+    // amount of liquid that can be inserted
     int amount = container->all_pockets_rigid() ? max_remaining_capacity :
                  std::min( max_remaining_capacity, container.max_charges_by_parent_recursive( liquid ).value() );
 
-    if( !err.empty() ) {
-        if( !container->has_item_with( [&liquid]( const item & it ) {
+    const bool desired_liquid_is_in = container->has_item_with( [&liquid]( const item & it ) {
         return it.typeId() == liquid.typeId();
-        } ) ) {
-            add_msg_if_player( m_bad, err );
-        } else {
-            //~ you filled <container> to the brim with <liquid>
-            add_msg_if_player( _( "You filled %1$s to the brim with %2$s." ), container->tname(),
-                               liquid.tname() );
-        }
+    } );
+
+    if( err == rem_cap_return::NO_SPACE && desired_liquid_is_in ) {
+        add_msg_if_player( _( "You filled %1$s to the brim with %2$s." ), container->tname(),
+                           liquid.tname() );
         return false;
     }
 
-    if( amount == 0 ) {
+    switch( err ) {
+        case rem_cap_return::BUCKET_FAIL:
+            add_msg_if_player( m_bad, _( "That %s must be on the ground or held to hold contents!" ),
+                               container->tname() );
+            return false;
+        case rem_cap_return::ANOTHER_LIQUID_INSIDE:
+            add_msg_if_player( m_bad, _( "That %1$s won't hold %2$s." ),
+                               container->tname(), liquid.tname() );
+            return false;
+        case rem_cap_return::NO_SPACE:
+            add_msg_if_player( m_bad, _( "Your %1$s can't hold any more %2$s." ),
+                               container->tname(), liquid.tname() );
+            return false;
+        case rem_cap_return::NO_SPACE_IN_PARENT:
+            add_msg_if_player( m_bad, _( "That %s doesn't have room to expand." ),
+                               container->tname() );
+            return false;
+        default:
+            break;
+    }
+
+    if( max_remaining_capacity == 0 ) {
         add_msg_if_player( _( "The %1$s can't expand to fit any more %2$s." ), container->tname(),
                            liquid.tname() );
         return false;
@@ -4174,7 +4194,7 @@ void Character::mend_item( item_location &&obj, bool interactive )
         return;
     }
 
-    const inventory &inv = crafting_inventory();
+    const temp_crafting_inventory &inv = crafting_inventory();
 
     struct mending_option {
         fault_id fault;
@@ -5712,7 +5732,7 @@ std::list<item> Character::use_charges( const itype_id &what, int qty, const int
                                         const std::function<bool( const item & )> &filter, bool in_tools )
 {
     std::list<item> res;
-    inventory inv = crafting_inventory( pos_bub(), radius, true );
+    temp_crafting_inventory inv = crafting_inventory( pos_bub(), radius, true );
 
     if( qty <= 0 ) {
         return res;
@@ -5760,6 +5780,7 @@ std::list<item> Character::use_charges( const itype_id &what, int qty, const int
     if( has_tool_with_UPS ) {
         consume_ups( units::from_kilojoule( static_cast<std::int64_t>( qty ) ), radius );
     }
+    invalidate_inventory_validity_cache();
 
     return res;
 }
