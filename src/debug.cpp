@@ -300,7 +300,14 @@ namespace
 
 std::set<std::string> ignored_messages;
 
+bool debug_prompts_auto_dismiss = false;
+
 } // namespace
+
+void set_debug_prompts_auto_dismiss( bool value )
+{
+    debug_prompts_auto_dismiss = value;
+}
 
 // debugmsg prompts that could not be shown immediately are buffered and replayed when catacurses::stdscr is available
 // need to use method here to ensure `buffered_prompts` vector is initialized single time
@@ -378,6 +385,12 @@ static void debug_error_prompt(
 #endif // TILES
                                      );
     std::string message = error_message + instructions;
+
+    if( debug_prompts_auto_dismiss ) {
+        // Automation: debugmsg() already wrote this report to the debug log, and blocking on
+        // the prompt would stall an unattended run (the harness reads the log instead).
+        return;
+    }
 
     // Create a special debug message UI that does various things to ensure
     // the graphics are correct when the debug message is displayed during a

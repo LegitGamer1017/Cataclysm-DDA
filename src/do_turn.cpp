@@ -661,6 +661,16 @@ bool game::do_turn()
                     queue_screenshot = false;
                 }
 
+                if( queue_screenshot_quiet ) {
+                    take_screenshot_quiet();
+                    queue_screenshot_quiet = false;
+                }
+
+                if( queue_snapshot ) {
+                    dump_snapshot();
+                    queue_snapshot = false;
+                }
+
                 if( handle_action() ) {
                     ++moves_since_last_save;
                     u.action_taken();

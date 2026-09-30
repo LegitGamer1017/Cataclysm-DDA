@@ -35,11 +35,13 @@
 #include "cata_allocator.h"
 #include "cata_path.h"
 #include "color.h"
+#include "avatar.h"
 #include "compatibility.h"
 #include "crash.h"
 #include "cursesdef.h"
 #include "debug.h"
 #include "do_turn.h"
+#include "enums.h"
 #include "event.h"
 #include "event_bus.h"
 #include "filesystem.h"
@@ -61,6 +63,7 @@
 #include "translations.h"
 #include "type_id.h"
 #include "ui_manager.h"
+#include "worldfactory.h"
 #include "cata_imgui.h"
 #if defined(MACOSX) || defined(__CYGWIN__)
 #   include <unistd.h> // getpid()
@@ -279,6 +282,12 @@ struct cli_opts {
     bool check_mods = false;
     std::vector<std::string> opts;
     std::string world; /** if set try to load first save in this world on startup */
+    std::string save_id; /** with --world, load this specific save instead of the first */
+    std::string input_script; /** queue the keys in this file at startup */
+    bool dismiss_debug_prompts = false; /** log debugmsgs without their blocking prompts */
+    std::string pocket_patch; /** apply this JSON pocket-settings patch after loading */
+    bool new_character = false; /** create a character non-interactively and start */
+    bool snapshot = false; /** write a situation snapshot on the first turn */
     bool disable_ascii_art = false;
 };
 
@@ -344,6 +353,66 @@ cli_opts parse_commandline( int argc, const char **argv )
                 1,
                 [&result]( int, const char **params ) -> int {
                     result.world = params[0];
+                    return 1;
+                }
+            },
+            {
+                "--save", "<save id>",
+                "With --world, load this specific save (character) instead of the first",
+                section_default,
+                1,
+                [&result]( int, const char **params ) -> int {
+                    result.save_id = params[0];
+                    return 1;
+                }
+            },
+            {
+                "--new-character", {},
+                "Create a character non-interactively in the --world world and start playing",
+                section_default,
+                0,
+                [&result]( int, const char ** ) -> int {
+                    result.new_character = true;
+                    return 0;
+                }
+            },
+            {
+                "--input-script", "<path>",
+                "Queue key presses from a script file (one key name per line) at startup",
+                section_default,
+                1,
+                [&result]( int, const char **params ) -> int {
+                    result.input_script = params[0];
+                    return 1;
+                }
+            },
+            {
+                "--dismiss-debug-prompts", {},
+                "Write debug messages to the log without showing their blocking prompts (automation)",
+                section_default,
+                0,
+                [&result]( int, const char ** ) -> int {
+                    result.dismiss_debug_prompts = true;
+                    return 0;
+                }
+            },
+            {
+                "--snapshot", {},
+                "Write a situation snapshot (mcp_snapshot.json) on the first turn",
+                section_default,
+                0,
+                [&result]( int, const char ** ) -> int {
+                    result.snapshot = true;
+                    return 0;
+                }
+            },
+            {
+                "--pocket-patch", "<path>",
+                "Apply a JSON pocket-settings patch to worn items once the game is loaded",
+                section_default,
+                1,
+                [&result]( int, const char **params ) -> int {
+                    result.pocket_patch = params[0];
                     return 1;
                 }
             },
@@ -868,14 +937,84 @@ void select_initial_language()
 #endif
 }
 
+// Queue a scripted key sequence: one key name per line, '#' comments and blank lines
+// ignored.  Keys are resolved with the game's own keycode tables *for the active keyboard
+// mode*, so "F9", "j" and "RETURN" all work and look like real keypresses.  The queue is
+// served by input_manager::get_input_event() ahead of real input, which makes a driven run
+// reproducible.
+static void load_input_script( const std::string &path )
+{
+    std::ifstream fin( path );
+    if( !fin.is_open() ) {
+        debugmsg( "input script: cannot read %s", path );
+        return;
+    }
+    std::vector<std::string> keys;
+    std::string line;
+    while( std::getline( fin, line ) ) {
+        while( !line.empty() && ( line.back() == '\r' || line.back() == ' ' ||
+                                  line.back() == '\t' ) ) {
+            line.pop_back();
+        }
+        const size_t start = line.find_first_not_of( " \t" );
+        if( start == std::string::npos || line[start] == '#' ) {
+            continue;
+        }
+        line = line.substr( start );
+        // Keep the *name*: input_manager resolves it per keyboard mode, so a scripted key
+        // looks like a real keypress wherever it is consumed.
+        keys.push_back( line );
+    }
+    if( !keys.empty() ) {
+        inp_mngr.inject_input_events( keys );
+    }
+}
+
 void run_game_loop( cli_opts &cli )
 {
     main_menu::queued_world_to_load = std::move( cli.world );
+    main_menu::queued_save_id_to_load = std::move( cli.save_id );
+
+    // NOTE: the input script is already queued in main(), before data loading, so that it
+    // can also answer the buffered debugmsg prompts replayed during startup.
+
+    if( cli.new_character ) {
+        // Non-interactive character creation: this is what automation uses instead of
+        // driving the main menu (and it skips world selection entirely).
+        // NOTE: the world factory is only initialised inside main_menu::opening_screen()
+        // normally, and we are deliberately skipping that, so do it here.
+        world_generator->init();
+        WORLD *w = world_generator->get_world( main_menu::queued_world_to_load );
+        if( w == nullptr ) {
+            debugmsg( "--new-character needs --world (no world named '%s')",
+                      main_menu::queued_world_to_load );
+            return;
+        }
+        world_generator->set_active_world( w );
+        if( !g->start_new_character() ) {
+            return;
+        }
+        if( !cli.pocket_patch.empty() ) {
+            g->apply_pocket_patch( cli.pocket_patch );
+        }
+        if( cli.snapshot ) {
+            g->request_snapshot();
+        }
+        while( !g->do_turn() ) {}
+        return;
+    }
 
     while( true ) {
         main_menu menu;
         if( !menu.opening_screen() ) {
             break;
+        }
+
+        if( !cli.pocket_patch.empty() ) {
+            g->apply_pocket_patch( cli.pocket_patch );
+        }
+        if( cli.snapshot ) {
+            g->request_snapshot();
         }
 
         shared_ptr_fast<ui_adaptor> ui = g->create_or_get_main_ui_adaptor();
@@ -916,6 +1055,23 @@ int main( int argc, const char *argv[] )
     MAP_SHARING::setDefaults();
 
     cli_opts cli = parse_commandline( argc, const_cast<const char **>( argv ) );
+
+    // Queue scripted keys as early as possible: data loading buffers its debugmsg prompts
+    // and replays them during startup, and each prompt blocks until a key arrives, so a
+    // script queued later can never answer them and the run stalls on the prompt instead of
+    // playing.  input_manager::inject_input_events() makes sure the keycode tables the keys
+    // resolve against exist even this early.
+    if( !cli.input_script.empty() ) {
+        load_input_script( cli.input_script );
+    }
+
+    // An unattended run must not block on a developer-facing prompt.  Data loading buffers
+    // debugmsg prompts (a duplicate mod id, a JSON error in data/mods, ...) and replays them
+    // during startup; each one waits for a key, which would stall the run before it plays.
+    // The reports still reach the debug log, where cdda_tail_debug can read them.
+    if( cli.dismiss_debug_prompts ) {
+        set_debug_prompts_auto_dismiss( true );
+    }
 
     validate_directories();
     initialize_debugging();

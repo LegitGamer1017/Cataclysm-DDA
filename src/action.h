@@ -305,6 +305,10 @@ enum action_id : int {
     ACTION_TOGGLE_FULLSCREEN,
     /** Open debug menu */
     ACTION_DEBUG,
+    /** Take a screenshot with no confirmation popup (writes <world>/screenshots/last.png) */
+    ACTION_TAKE_SCREENSHOT,
+    /** Write a machine-readable situation snapshot (writes <world>/mcp_snapshot.json) */
+    ACTION_MCP_SNAPSHOT,
     /** Toggle scent map */
     ACTION_DISPLAY_SCENT,
     /** Toggle scent type map */

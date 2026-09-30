@@ -3431,6 +3431,20 @@
   },
   {
     "type": "keybinding",
+    "name": "Take screenshot (no popup, saves screenshots/last.png)",
+    "category": "DEFAULTMODE",
+    "id": "screenshot",
+    "bindings": [ { "input_method": "keyboard_any", "key": "F9" } ]
+  },
+  {
+    "type": "keybinding",
+    "name": "Dump situation snapshot (saves mcp_snapshot.json)",
+    "category": "DEFAULTMODE",
+    "id": "mcp_snapshot",
+    "bindings": [ { "input_method": "keyboard_any", "key": "F8" } ]
+  },
+  {
+    "type": "keybinding",
     "id": "DEBUG_DIALOGUE_DL_CONDITIONAL",
     "name": "Toggle debug dialogue dynamic_line conditionals",
     "bindings": [

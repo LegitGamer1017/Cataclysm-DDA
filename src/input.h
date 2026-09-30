@@ -334,6 +334,27 @@ class input_manager
          */
         input_event get_input_event( keyboard_mode preferred_keyboard_mode = keyboard_mode::keycode );
         /**
+         * Queue scripted input keys (the `--input-script` seam) by key *name*, e.g. "j",
+         * "F9", "RETURN".  A queued key is returned by get_input_event() *ahead of* any
+         * real input, so a scripted run is deterministic; once the queue drains, real
+         * input resumes.
+         *
+         * Keys are stored as names rather than as events because the event a key must
+         * produce depends on the *active* keyboard mode: the tiles front-end delivers
+         * keyboard_code events, and any UI that assigns letter hotkeys (the dialogue
+         * window) matches them by exact event equality, so a char event is silently
+         * ignored there.
+         */
+        void inject_input_events( const std::vector<std::string> &key_names );
+        /**
+         * Take the next scripted key as an event built for `preferred_keyboard_mode`, or a
+         * default-constructed (input_event_t::error) event when the queue is empty.  The
+         * front-ends call this at the top of get_input_event().
+         */
+        input_event pop_injected_event( keyboard_mode preferred_keyboard_mode );
+        /** How many scripted keys are still queued (diagnostics). */
+        int injected_input_remaining() const;
+        /**
          * Resize & refresh if necessary, process all pending window events, and ignore keypresses
          */
         void pump_events();
@@ -369,6 +390,11 @@ class input_manager
         using t_actions = std::map<std::string, action_attributes>;
         using t_action_contexts = std::map<std::string, t_actions>;
         t_action_contexts action_contexts;
+        // Scripted input (see inject_input_events); consumed before real input.
+        std::vector<std::string> injected_keys;
+        size_t injected_cursor = 0;
+        /** The event a real keypress of `name` would produce in `mode`. */
+        input_event scripted_key_event( const std::string &name, keyboard_mode mode ) const;
         /**
          * called basic rather than default to not confuse default context
          * basic means default keybindings (without user changes)

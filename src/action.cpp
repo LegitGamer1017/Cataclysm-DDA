@@ -337,6 +337,10 @@ std::string action_ident( action_id act )
             return "help";
         case ACTION_DEBUG:
             return "debug";
+        case ACTION_TAKE_SCREENSHOT:
+            return "screenshot";
+        case ACTION_MCP_SNAPSHOT:
+            return "mcp_snapshot";
         case ACTION_DISPLAY_NPC_ATTACK_POTENTIAL:
             return "debug_npc_attack_potential";
         case ACTION_TOGGLE_HOUR_TIMER:

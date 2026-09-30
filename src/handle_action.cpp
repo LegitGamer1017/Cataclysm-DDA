@@ -3144,6 +3144,17 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             debug_menu::debug();
             break;
 
+        case ACTION_TAKE_SCREENSHOT:
+            // Queued rather than taken here: the turn loop owns the renderer, and the
+            // quiet variant writes a fixed path for automation (no confirmation popup).
+            queue_screenshot_quiet = true;
+            break;
+
+        case ACTION_MCP_SNAPSHOT:
+            // Queued for the same reason as the screenshot: the turn loop owns the world.
+            queue_snapshot = true;
+            break;
+
         case ACTION_TOGGLE_FULLSCREEN:
             toggle_fullscreen();
             break;

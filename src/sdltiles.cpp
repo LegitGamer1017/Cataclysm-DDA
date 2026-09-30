@@ -6440,6 +6440,13 @@ input_event input_manager::get_input_event( const keyboard_mode preferred_keyboa
         throw std::runtime_error( "input_manager::get_input_event called in test mode" );
     }
 
+    // Scripted input (--input-script) is served before any real input, built to look like
+    // the event this front-end would produce in the requested keyboard mode.
+    input_event injected = pop_injected_event( preferred_keyboard_mode );
+    if( injected.type != input_event_t::error ) {
+        return injected;
+    }
+
     // Pump so a just-queued reset reaches the inbox via the event watch, then
     // drain before the pre-poll draw path. Pumping does not consume input; the
     // CheckMessages poll below still reads it.
