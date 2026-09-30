@@ -136,6 +136,7 @@
 #include "iuse.h"
 #include "iuse_actor.h"
 #include "json.h"
+#include "json_loader.h"
 #include "kill_tracker.h"
 #include "level_cache.h"
 #include "lightmap.h"
