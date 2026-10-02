@@ -52,6 +52,7 @@
 #include "help.h"
 #include "input.h"
 #include "main_menu.h"
+#include "npctalk.h"
 #include "mapsharing.h"
 #include "memory_fast.h"
 #include "options.h"
@@ -285,8 +286,10 @@ struct cli_opts {
     std::string save_id; /** with --world, load this specific save instead of the first */
     std::string input_script; /** queue the keys in this file at startup */
     bool dismiss_debug_prompts = false; /** log debugmsgs without their blocking prompts */
+    bool dialogue_dump = false; /** write every generated talk topic to mcp_dialogue.json */
     std::string pocket_patch; /** apply this JSON pocket-settings patch after loading */
     std::string var_patch; /** apply this JSON character-state patch after loading */
+    std::vector<std::string> widget_dump; /** render these widget ids into the snapshot */
     bool new_character = false; /** create a character non-interactively and start */
     bool snapshot = false; /** write a situation snapshot on the first turn */
     bool disable_ascii_art = false;
@@ -398,6 +401,16 @@ cli_opts parse_commandline( int argc, const char **argv )
                 }
             },
             {
+                "--dialogue-dump", {},
+                "Write every generated talk topic (shown responses + silently dropped ones) to <world>/mcp_dialogue.json",
+                section_default,
+                0,
+                [&result]( int, const char ** ) -> int {
+                    result.dialogue_dump = true;
+                    return 0;
+                }
+            },
+            {
                 "--snapshot", {},
                 "Write a situation snapshot (mcp_snapshot.json) on the first turn",
                 section_default,
@@ -424,6 +437,30 @@ cli_opts parse_commandline( int argc, const char **argv )
                 1,
                 [&result]( int, const char **params ) -> int {
                     result.var_patch = params[0];
+                    return 1;
+                }
+            },
+            {
+                "--widget-dump", "<comma-separated widget ids>",
+                "Render these widgets to text inside the --snapshot (e.g. structured_sidebar)",
+                section_default,
+                1,
+                [&result]( int, const char **params ) -> int {
+                    std::string ids( params[0] );
+                    std::string cur;
+                    for( const char c : ids ) {
+                        if( c == ',' ) {
+                            if( !cur.empty() ) {
+                                result.widget_dump.emplace_back( cur );
+                                cur.clear();
+                            }
+                        } else if( c != ' ' ) {
+                            cur += c;
+                        }
+                    }
+                    if( !cur.empty() ) {
+                        result.widget_dump.emplace_back( cur );
+                    }
                     return 1;
                 }
             },
@@ -1011,6 +1048,9 @@ void run_game_loop( cli_opts &cli )
         if( !cli.var_patch.empty() ) {
             g->apply_var_patch( cli.var_patch );
         }
+        if( !cli.widget_dump.empty() ) {
+            g->set_widget_dump_ids( cli.widget_dump );
+        }
         if( cli.snapshot ) {
             g->request_snapshot();
         }
@@ -1029,6 +1069,9 @@ void run_game_loop( cli_opts &cli )
         }
         if( !cli.var_patch.empty() ) {
             g->apply_var_patch( cli.var_patch );
+        }
+        if( !cli.widget_dump.empty() ) {
+            g->set_widget_dump_ids( cli.widget_dump );
         }
         if( cli.snapshot ) {
             g->request_snapshot();
@@ -1088,6 +1131,9 @@ int main( int argc, const char *argv[] )
     // The reports still reach the debug log, where cdda_tail_debug can read them.
     if( cli.dismiss_debug_prompts ) {
         set_debug_prompts_auto_dismiss( true );
+    }
+    if( cli.dialogue_dump ) {
+        set_dialogue_dump_enabled( true );
     }
 
     validate_directories();

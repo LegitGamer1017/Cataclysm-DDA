@@ -843,6 +843,14 @@ class game
          *  harness -- a character at realm 9, carrying an old id, mid-breakthrough -- without
          *  playing them into that state.  Records what it applied next to the patch. */
         void apply_var_patch( const std::string &patch_path );
+        /** Widget ids whose *rendered text* the snapshot should carry (the `--widget-dump`
+         *  seam).  A widget clause whose condition never holds draws nothing while its JSON
+         *  still loads cleanly, so rendering the widget is the only way to see whether the
+         *  line actually appears — which is what a UI regression assertion needs. */
+        void set_widget_dump_ids( const std::vector<std::string> &ids );
+        /** Widget ids to render into the snapshot (see set_widget_dump_ids). */
+        std::vector<std::string> widget_dump_ids;
+
         /** Non-interactive new game (the `--new-character` seam).  The active world must
          *  already be set (world_generator->set_active_world); creates a random character
          *  and starts the game.  Lives here because setup()/start_game() are private. */

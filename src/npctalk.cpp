@@ -2001,11 +2001,57 @@ talk_response &dialogue::add_response( const std::string &text, const std::strin
     return result;
 }
 
+// --- the --dialogue-dump seam -------------------------------------------------
+// Every generated topic is written to <world>/mcp_dialogue.json when enabled: the responses
+// that were shown, and the candidates dropped silently (a failed condition with no
+// failure_explanation/failure_topic).  See set_dialogue_dump_enabled() in npctalk.h.
+static bool dialogue_dump_enabled = false;
+static std::vector<std::string> dialogue_dropped;
+
+void set_dialogue_dump_enabled( bool enabled )
+{
+    dialogue_dump_enabled = enabled;
+}
+
+static void write_dialogue_dump( const std::string &topic_id,
+                                 const std::vector<talk_response> &shown )
+{
+    try {
+        const cata_path out = PATH_INFO::world_base_save_path() / "mcp_dialogue.json";
+        std::ofstream fout( out.get_unrelative_path(), std::ios::trunc );
+        if( !fout.is_open() ) {
+            return;
+        }
+        JsonOut jsout( fout );
+        jsout.start_object();
+        jsout.member( "topic", topic_id );
+        jsout.member( "shown" );
+        jsout.start_array();
+        for( const talk_response &r : shown ) {
+            jsout.start_object();
+            jsout.member( "text", r.truetext.translated() );
+            jsout.member( "next_topic", r.success.next_topic.id );
+            jsout.end_object();
+        }
+        jsout.end_array();
+        jsout.member( "dropped" );
+        jsout.start_array();
+        for( const std::string &line : dialogue_dropped ) {
+            jsout.write( line );
+        }
+        jsout.end_array();
+        jsout.end_object();
+    } catch( const std::exception & ) {
+        // diagnostics are best effort; the dialogue is what matters
+    }
+}
+
 void dialogue::gen_responses( const talk_topic &the_topic )
 {
     responses.clear();
     response_condition_exists.clear();
     response_condition_eval.clear();
+    dialogue_dropped.clear();
 
     const auto iter = json_talk_topics.find( the_topic.id );
     if( iter != json_talk_topics.end() ) {
@@ -2855,6 +2901,12 @@ talk_topic dialogue::opt_imgui( dialogue_imgui_impl &d_img, const talk_topic &to
     // Construct full line
     std::string challenge = dynamic_line( topic );
     gen_responses( topic );
+
+    // The response list is now final: write it (with anything silently dropped) when the
+    // --dialogue-dump seam is on, so a missing option can be explained without reading source.
+    if( dialogue_dump_enabled ) {
+        write_dialogue_dump( topic.id, responses );
+    }
 
     // Put quotes around challenge (unless it's an action)
     if( challenge[0] != '*' && challenge[0] != '&' ) {
@@ -9124,6 +9176,12 @@ bool json_talk_response::gen_responses( dialogue &d, bool switch_done )
                 tr.success.next_topic = talk_topic( failure_topic );
             }
             d.add_gen_response( tr, false, !!condition, condition_result );
+        } else if( dialogue_dump_enabled ) {
+            // The option is invisible to the player: record it for --dialogue-dump, because
+            // nothing else says why it is missing.
+            dialogue_dropped.emplace_back( string_format(
+                                               "\"%s\" — its condition failed and it declares no failure_explanation/failure_topic, so the response is dropped",
+                                               actual_response.truetext.translated() ) );
         }
     }
     return false;

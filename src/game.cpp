@@ -137,6 +137,7 @@
 #include "iuse_actor.h"
 #include "json.h"
 #include "json_loader.h"
+#include "widget.h"
 #include "kill_tracker.h"
 #include "level_cache.h"
 #include "lightmap.h"
@@ -6759,7 +6760,37 @@ void game::dump_snapshot()
     }
     json.end_array();
 
+    // Rendered widget text (`--widget-dump`): the sidebar is a widget, and a clause whose
+    // condition never holds simply draws nothing -- its JSON still loads cleanly and nothing
+    // in the log mentions it.  Rendering the widget is the only way to see whether a line the
+    // mod added actually appears.
+    if( !widget_dump_ids.empty() ) {
+        json.member( "widgets" );
+        json.start_object();
+        for( const std::string &want : widget_dump_ids ) {
+            json.member( want );
+            json.start_object();
+            const widget_id wid( want );
+            if( !wid.is_valid() ) {
+                json.member( "error", "unknown widget id" );
+            } else {
+                // layout() is non-const while the widget factory hands out a const reference,
+                // so render a copy.  Width matters: a clause can also vanish for lack of room.
+                widget w = wid.obj();
+                const std::string rendered = w.layout( you, 120 );
+                json.member( "text", rendered );
+            }
+            json.end_object();
+        }
+        json.end_object();
+    }
+
     json.end_object();
+}
+
+void game::set_widget_dump_ids( const std::vector<std::string> &ids )
+{
+    widget_dump_ids = ids;
 }
 
 void game::apply_var_patch( const std::string &patch_path )

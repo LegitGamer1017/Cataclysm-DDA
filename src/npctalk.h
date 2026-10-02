@@ -16,6 +16,15 @@ class json_talk_topic;
 class npc;
 class time_duration;
 
+/**
+ * When enabled, every generated talk topic is written to
+ * `<world>/mcp_dialogue.json`: the line, the responses that were shown, and the candidates that
+ * were *dropped* with the reason.  A response whose condition fails is discarded silently unless
+ * it declares `failure_explanation`/`failure_topic`, so "why can't the player see this option?"
+ * is otherwise answerable only by reading engine source.  Used by `--dialogue-dump`.
+ */
+void set_dialogue_dump_enabled( bool enabled );
+
 namespace talk_function
 {
 
