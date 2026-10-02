@@ -286,6 +286,7 @@ struct cli_opts {
     std::string input_script; /** queue the keys in this file at startup */
     bool dismiss_debug_prompts = false; /** log debugmsgs without their blocking prompts */
     std::string pocket_patch; /** apply this JSON pocket-settings patch after loading */
+    std::string var_patch; /** apply this JSON character-state patch after loading */
     bool new_character = false; /** create a character non-interactively and start */
     bool snapshot = false; /** write a situation snapshot on the first turn */
     bool disable_ascii_art = false;
@@ -413,6 +414,16 @@ cli_opts parse_commandline( int argc, const char **argv )
                 1,
                 [&result]( int, const char **params ) -> int {
                     result.pocket_patch = params[0];
+                    return 1;
+                }
+            },
+            {
+                "--var-patch", "<path>",
+                "Apply a JSON character-state patch (values, traits, proficiencies, skills, effects, vitamins) once the game is loaded",
+                section_default,
+                1,
+                [&result]( int, const char **params ) -> int {
+                    result.var_patch = params[0];
                     return 1;
                 }
             },
@@ -997,6 +1008,9 @@ void run_game_loop( cli_opts &cli )
         if( !cli.pocket_patch.empty() ) {
             g->apply_pocket_patch( cli.pocket_patch );
         }
+        if( !cli.var_patch.empty() ) {
+            g->apply_var_patch( cli.var_patch );
+        }
         if( cli.snapshot ) {
             g->request_snapshot();
         }
@@ -1012,6 +1026,9 @@ void run_game_loop( cli_opts &cli )
 
         if( !cli.pocket_patch.empty() ) {
             g->apply_pocket_patch( cli.pocket_patch );
+        }
+        if( !cli.var_patch.empty() ) {
+            g->apply_var_patch( cli.var_patch );
         }
         if( cli.snapshot ) {
             g->request_snapshot();

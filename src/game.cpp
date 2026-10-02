@@ -6762,6 +6762,119 @@ void game::dump_snapshot()
     json.end_object();
 }
 
+void game::apply_var_patch( const std::string &patch_path )
+{
+    // The `--var-patch` seam: put a character into a state from JSON instead of playing them
+    // into it.  That is the fixture half of the harness -- "at realm 9", "carrying the old
+    // scroll id", "mid-breakthrough" -- and it is what makes a migration or a realm-gated flow
+    // testable at all.  Sibling of apply_pocket_patch() with the same rules: it reports what it
+    // applied next to the patch and never throws out to its caller.
+    avatar &you = get_avatar();
+    const cata_path result_path =
+        PATH_INFO::world_base_save_path() / "mcp_var_patch.result.json";
+    std::vector<std::string> applied;
+    std::vector<std::string> failed;
+
+    try {
+        JsonValue jv = json_loader::from_path(
+                           cata_path( cata_path::root_path::unknown, patch_path ) );
+        const JsonObject root = jv.get_object();
+
+        if( root.has_member( "values" ) ) {
+            for( const JsonMember m : root.get_object( "values" ) ) {
+                const std::string name = m.name();
+                std::string value;
+                if( m.test_string() ) {
+                    value = m.get_string();
+                } else if( m.test_number() ) {
+                    value = string_format( "%.6f", m.get_float() );
+                } else {
+                    failed.emplace_back( "values." + name + ": expected a string or number" );
+                    continue;
+                }
+                you.set_value( name, value );
+                applied.emplace_back( "value " + name + "=" + value );
+            }
+        }
+        if( root.has_member( "traits" ) ) {
+            for( const JsonValue v : root.get_array( "traits" ) ) {
+                const trait_id tid( v.get_string() );
+                if( !tid.is_valid() ) {
+                    failed.emplace_back( "trait " + tid.str() + ": unknown id" );
+                    continue;
+                }
+                you.set_mutation( tid );
+                applied.emplace_back( "trait " + tid.str() );
+            }
+        }
+        if( root.has_member( "proficiencies" ) ) {
+            for( const JsonValue v : root.get_array( "proficiencies" ) ) {
+                const proficiency_id pid( v.get_string() );
+                if( !pid.is_valid() ) {
+                    failed.emplace_back( "proficiency " + pid.str() + ": unknown id" );
+                    continue;
+                }
+                // ignore_requirements: a fixture states the state, it does not roleplay into it
+                you.add_proficiency( pid, true );
+                applied.emplace_back( "proficiency " + pid.str() );
+            }
+        }
+        if( root.has_member( "skills" ) ) {
+            for( const JsonMember m : root.get_object( "skills" ) ) {
+                const skill_id sid( m.name() );
+                if( !sid.is_valid() ) {
+                    failed.emplace_back( "skill " + m.name() + ": unknown id" );
+                    continue;
+                }
+                you.set_skill_level( sid, m.get_int() );
+                applied.emplace_back( "skill " + m.name() + "=" +
+                                      std::to_string( m.get_int() ) );
+            }
+        }
+        if( root.has_member( "effects" ) ) {
+            for( const JsonValue v : root.get_array( "effects" ) ) {
+                const JsonObject e = v.get_object();
+                const efftype_id eid( e.get_string( "id" ) );
+                if( !eid.is_valid() ) {
+                    failed.emplace_back( "effect " + eid.str() + ": unknown id" );
+                    continue;
+                }
+                you.add_effect( eid, time_duration::from_turns( e.get_int( "turns", 1 ) ) );
+                applied.emplace_back( "effect " + eid.str() );
+            }
+        }
+        if( root.has_member( "vitamins" ) ) {
+            for( const JsonMember m : root.get_object( "vitamins" ) ) {
+                const vitamin_id vid( m.name() );
+                if( !vid.is_valid() ) {
+                    failed.emplace_back( "vitamin " + m.name() + ": unknown id" );
+                    continue;
+                }
+                you.vitamin_set( vid, m.get_int() );
+                applied.emplace_back( "vitamin " + m.name() + "=" +
+                                      std::to_string( m.get_int() ) );
+            }
+        }
+    } catch( const std::exception &err ) {
+        failed.emplace_back( std::string( "parse: " ) + err.what() );
+    }
+
+    // Report next to the patch, so a run can assert on what actually happened rather than
+    // assuming the fixture landed.
+    try {
+        std::ofstream fout( result_path.get_unrelative_path(), std::ios::trunc );
+        if( fout.is_open() ) {
+            JsonOut jsout( fout );
+            jsout.start_object();
+            jsout.member( "applied", applied );
+            jsout.member( "failed", failed );
+            jsout.end_object();
+        }
+    } catch( const std::exception & ) {
+        // reporting is best effort; the character state is what matters
+    }
+}
+
 void game::apply_pocket_patch( const std::string &patch_path )
 {
     // Pocket settings are normally only reachable through the pocket-settings UI;

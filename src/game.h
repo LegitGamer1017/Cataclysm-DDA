@@ -838,6 +838,11 @@ class game
          *  `--pocket-patch` seam): matches by item type id + pocket index and sets
          *  whitelist/blacklist/priority/disabled without going through the UI. */
         void apply_pocket_patch( const std::string &patch_path );
+        /** Put the avatar into a state from JSON (the `--var-patch` seam): character values,
+         *  traits, proficiencies, skills, effects and vitamins.  The fixture half of the
+         *  harness -- a character at realm 9, carrying an old id, mid-breakthrough -- without
+         *  playing them into that state.  Records what it applied next to the patch. */
+        void apply_var_patch( const std::string &patch_path );
         /** Non-interactive new game (the `--new-character` seam).  The active world must
          *  already be set (world_generator->set_active_world); creates a random character
          *  and starts the game.  Lives here because setup()/start_game() are private. */
