@@ -6793,6 +6793,28 @@ void game::set_widget_dump_ids( const std::vector<std::string> &ids )
     widget_dump_ids = ids;
 }
 
+// "1" reads better than "1.000000" in the applied list, and is what the engine actually stores.
+static std::string describe_patch_number( double value )
+{
+    if( value == static_cast<double>( static_cast<long long>( value ) ) ) {
+        return string_format( "%lld", static_cast<long long>( value ) );
+    }
+    return string_format( "%g", value );
+}
+
+// Does this string look like something the caller meant as a number?  Used to warn about the
+// one remaining silent type trap: a quoted number is stored as text, and the math parser then
+// refuses it ("requested double, got string") somewhere far away, in the mod under test.
+static bool looks_like_a_number( const std::string &text )
+{
+    if( text.empty() ) {
+        return false;
+    }
+    char *end = nullptr;
+    std::strtod( text.c_str(), &end );
+    return end != nullptr && *end == '\0' && end != text.c_str();
+}
+
 void game::apply_var_patch( const std::string &patch_path )
 {
     // The `--var-patch` seam: put a character into a state from JSON instead of playing them
@@ -6805,6 +6827,7 @@ void game::apply_var_patch( const std::string &patch_path )
         PATH_INFO::world_base_save_path() / "mcp_var_patch.result.json";
     std::vector<std::string> applied;
     std::vector<std::string> failed;
+    std::vector<std::string> notes;
 
     try {
         JsonValue jv = json_loader::from_path(
@@ -6814,17 +6837,32 @@ void game::apply_var_patch( const std::string &patch_path )
         if( root.has_member( "values" ) ) {
             for( const JsonMember m : root.get_object( "values" ) ) {
                 const std::string name = m.name();
-                std::string value;
                 if( m.test_string() ) {
-                    value = m.get_string();
+                    const std::string text = m.get_string();
+                    you.set_value( name, text );
+                    applied.emplace_back( "value " + name + "=" + text + " (string)" );
+                    if( looks_like_a_number( text ) ) {
+                        notes.emplace_back( "values." + name + " was written as a string (\""
+                                            + text + "\"); pass it as a JSON number if anything "
+                                            "compares it numerically" );
+                    }
                 } else if( m.test_number() ) {
-                    value = string_format( "%.6f", m.get_float() );
+                    // A JSON number must land in the *numeric* store.  set_value() is overloaded
+                    // on a variant, and the string form is never coerced later: the math parser
+                    // raises "Type mismatch ... requested double, got string" as soon as the
+                    // value is compared.  Formatting it with "%.6f" through the string overload
+                    // is exactly what stopped a patched number from driving any numeric logic
+                    // (realm thresholds, bottleneck conditions, counter comparisons).  This is
+                    // the same setter condition.cpp uses for `u_x = 4321`, so the value is
+                    // stored and saved like any in-game assignment.
+                    const double num = m.get_float();
+                    you.set_value( name, num );
+                    applied.emplace_back( "value " + name + "=" + describe_patch_number( num )
+                                          + " (number)" );
                 } else {
                     failed.emplace_back( "values." + name + ": expected a string or number" );
                     continue;
                 }
-                you.set_value( name, value );
-                applied.emplace_back( "value " + name + "=" + value );
             }
         }
         if( root.has_member( "traits" ) ) {
@@ -6899,6 +6937,7 @@ void game::apply_var_patch( const std::string &patch_path )
             jsout.start_object();
             jsout.member( "applied", applied );
             jsout.member( "failed", failed );
+            jsout.member( "notes", notes );
             jsout.end_object();
         }
     } catch( const std::exception & ) {
