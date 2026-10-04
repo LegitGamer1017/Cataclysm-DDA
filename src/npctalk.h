@@ -25,6 +25,14 @@ class time_duration;
  */
 void set_dialogue_dump_enabled( bool enabled );
 
+/**
+ * When enabled, every `run_eoc_selector` menu writes `<world>/mcp_selector.json`: the title and
+ * each option's name, key, description, whether it is selectable, and whether `hide_failing`
+ * removed it.  A menu whose options are all greyed renders dead and says nothing about why --
+ * which is the bug this exists to make visible.  Used by `--selector-dump`.
+ */
+void set_selector_dump_enabled( bool enabled );
+
 namespace talk_function
 {
 

@@ -6653,6 +6653,11 @@ void game::dump_snapshot()
     json.member( "stamina", you.get_stamina() );
     json.member( "activity",
                  you.activity ? you.activity.id().str() : std::string( "ACT_NULL" ) );
+    // The avatar's character values, written the way the save writes them: a number stays a
+    // number, a string keeps its {"str": ...} form.  A scenario that stops inside a dialogue
+    // cannot save, so this is the only way to assert character state for such a run -- and it
+    // makes a --var-patch type regression visible without a save.
+    json.member( "values", you.get_values() );
     json.end_object();
 
     const tripoint_bub_ms center = you.pos_bub();
@@ -6876,6 +6881,25 @@ void game::apply_var_patch( const std::string &patch_path )
                 applied.emplace_back( "trait " + tid.str() );
             }
         }
+        if( root.has_member( "remove_traits" ) ) {
+            // "A character who does not have X" is half of every negative fixture, and a fresh
+            // character always gets what the opening dialogue grants -- so adding is not enough.
+            for( const JsonValue v : root.get_array( "remove_traits" ) ) {
+                const trait_id tid( v.get_string() );
+                if( !tid.is_valid() ) {
+                    failed.emplace_back( "remove_trait " + tid.str() + ": unknown id" );
+                    continue;
+                }
+                if( you.has_trait( tid ) ) {
+                    you.unset_mutation( tid );
+                    applied.emplace_back( "remove_trait " + tid.str() );
+                } else {
+                    // Not a failure: asking for the absence of a trait the character never had
+                    // is a legitimate fixture, it just had nothing to do.
+                    notes.emplace_back( "remove_traits: the character did not have " + tid.str() );
+                }
+            }
+        }
         if( root.has_member( "proficiencies" ) ) {
             for( const JsonValue v : root.get_array( "proficiencies" ) ) {
                 const proficiency_id pid( v.get_string() );
@@ -6910,6 +6934,21 @@ void game::apply_var_patch( const std::string &patch_path )
                 }
                 you.add_effect( eid, time_duration::from_turns( e.get_int( "turns", 1 ) ) );
                 applied.emplace_back( "effect " + eid.str() );
+            }
+        }
+        if( root.has_member( "remove_effects" ) ) {
+            for( const JsonValue v : root.get_array( "remove_effects" ) ) {
+                const efftype_id eid( v.get_string() );
+                if( !eid.is_valid() ) {
+                    failed.emplace_back( "remove_effect " + eid.str() + ": unknown id" );
+                    continue;
+                }
+                if( you.has_effect( eid ) ) {
+                    you.remove_effect( eid );
+                    applied.emplace_back( "remove_effect " + eid.str() );
+                } else {
+                    notes.emplace_back( "remove_effects: the character did not have " + eid.str() );
+                }
             }
         }
         if( root.has_member( "vitamins" ) ) {

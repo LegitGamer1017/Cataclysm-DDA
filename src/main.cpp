@@ -287,6 +287,7 @@ struct cli_opts {
     std::string input_script; /** queue the keys in this file at startup */
     bool dismiss_debug_prompts = false; /** log debugmsgs without their blocking prompts */
     bool dialogue_dump = false; /** write every generated talk topic to mcp_dialogue.json */
+    bool selector_dump = false; /** write every run_eoc_selector menu to mcp_selector.json */
     std::string pocket_patch; /** apply this JSON pocket-settings patch after loading */
     std::string var_patch; /** apply this JSON character-state patch after loading */
     std::vector<std::string> widget_dump; /** render these widget ids into the snapshot */
@@ -402,11 +403,21 @@ cli_opts parse_commandline( int argc, const char **argv )
             },
             {
                 "--dialogue-dump", {},
-                "Write every generated talk topic (shown responses + silently dropped ones) to <world>/mcp_dialogue.json",
+                "Write every generated talk topic (line, shown responses + silently dropped ones) to <world>/mcp_dialogue.json",
                 section_default,
                 0,
                 [&result]( int, const char ** ) -> int {
                     result.dialogue_dump = true;
+                    return 0;
+                }
+            },
+            {
+                "--selector-dump", {},
+                "Write every run_eoc_selector menu (title, options, which are selectable or hidden) to <world>/mcp_selector.json",
+                section_default,
+                0,
+                [&result]( int, const char ** ) -> int {
+                    result.selector_dump = true;
                     return 0;
                 }
             },
@@ -1134,6 +1145,9 @@ int main( int argc, const char *argv[] )
     }
     if( cli.dialogue_dump ) {
         set_dialogue_dump_enabled( true );
+    }
+    if( cli.selector_dump ) {
+        set_selector_dump_enabled( true );
     }
 
     validate_directories();

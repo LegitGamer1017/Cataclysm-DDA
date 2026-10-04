@@ -2013,7 +2013,57 @@ void set_dialogue_dump_enabled( bool enabled )
     dialogue_dump_enabled = enabled;
 }
 
-static void write_dialogue_dump( const std::string &topic_id,
+// --- the --selector-dump seam -------------------------------------------------
+// run_eoc_selector builds a menu of EOCs, each shown or greyed by its own condition.  When every
+// option is greyed the menu simply renders dead and nothing says why -- the bug this dump exists
+// for.  Each build writes <world>/mcp_selector.json: the title and every option with its key,
+// description, whether it is selectable, and whether `hide_failing` removed it entirely.
+static bool selector_dump_enabled = false;
+
+void set_selector_dump_enabled( bool enabled )
+{
+    selector_dump_enabled = enabled;
+}
+
+struct dumped_selector_entry {
+    std::string name;
+    std::string key;
+    std::string description;
+    bool selectable = false;
+    bool hidden = false;
+};
+
+static void write_selector_dump( const std::string &title,
+                                 const std::vector<dumped_selector_entry> &entries )
+{
+    try {
+        const cata_path out = PATH_INFO::world_base_save_path() / "mcp_selector.json";
+        std::ofstream fout( out.get_unrelative_path(), std::ios::trunc );
+        if( !fout.is_open() ) {
+            return;
+        }
+        JsonOut jsout( fout );
+        jsout.start_object();
+        jsout.member( "title", title );
+        jsout.member( "options" );
+        jsout.start_array();
+        for( const dumped_selector_entry &e : entries ) {
+            jsout.start_object();
+            jsout.member( "name", e.name );
+            jsout.member( "key", e.key );
+            jsout.member( "description", e.description );
+            jsout.member( "selectable", e.selectable );
+            jsout.member( "hidden", e.hidden );
+            jsout.end_object();
+        }
+        jsout.end_array();
+        jsout.end_object();
+    } catch( const std::exception & ) {
+        // diagnostics are best effort; the menu is what matters
+    }
+}
+
+static void write_dialogue_dump( const std::string &topic_id, const std::string &line,
                                  const std::vector<talk_response> &shown )
 {
     try {
@@ -2025,6 +2075,12 @@ static void write_dialogue_dump( const std::string &topic_id,
         JsonOut jsout( fout );
         jsout.start_object();
         jsout.member( "topic", topic_id );
+        // What the screen *says*, not just which options it offers: the prose is most of what a
+        // dialogue-heavy mod ships, and it lives in the topic's dynamic_line.  `line` is the raw
+        // string (mod tags like <npc_name> unexpanded); `lines` is the same text folded to the
+        // width the screen uses, so an assertion can match a rendered line.
+        jsout.member( "line", line );
+        jsout.member( "lines", foldstring( line, 60 ) );
         jsout.member( "shown" );
         jsout.start_array();
         for( const talk_response &r : shown ) {
@@ -2905,7 +2961,13 @@ talk_topic dialogue::opt_imgui( dialogue_imgui_impl &d_img, const talk_topic &to
     // The response list is now final: write it (with anything silently dropped) when the
     // --dialogue-dump seam is on, so a missing option can be explained without reading source.
     if( dialogue_dump_enabled ) {
-        write_dialogue_dump( topic.id, responses );
+        // `challenge` is the dynamic line, already quoted unless it is an action; strip the
+        // action marker so the dump starts with the prose itself.
+        std::string dumped_line = challenge;
+        while( !dumped_line.empty() && ( dumped_line.front() == '*' || dumped_line.front() == '&' ) ) {
+            dumped_line.erase( dumped_line.begin() );
+        }
+        write_dialogue_dump( topic.id, dumped_line, responses );
     }
 
     // Put quotes around challenge (unless it's an action)
@@ -6740,6 +6802,11 @@ talk_effect_fun_t::func f_run_eoc_selector( const JsonObject &jo, std::string_vi
         talker &beta = d.has_beta ? *d.actor( true ) : *default_talker;
 
 
+        // Collected for --selector-dump: what this menu offers, and why an option is not
+        // selectable.  Recorded for hidden entries too, so "hidden by hide_failing" reads
+        // differently from "greyed by its condition".
+        std::vector<dumped_selector_entry> dumped;
+
         eoc_list.text = title.translated();
         eoc_list.allow_cancel = allow_cancel;
         eoc_list.desc_enabled = !eoc_descriptions.empty();
@@ -6761,6 +6828,13 @@ talk_effect_fun_t::func f_run_eoc_selector( const JsonObject &jo, std::string_vi
 
             if( hide_failing && !display ) {
                 // skip hidden entries
+                if( selector_dump_enabled ) {
+                    dumped_selector_entry h;
+                    h.name = eoc_id.str();
+                    h.selectable = false;
+                    h.hidden = true;
+                    dumped.emplace_back( h );
+                }
                 continue;
             }
 
@@ -6786,6 +6860,19 @@ talk_effect_fun_t::func f_run_eoc_selector( const JsonObject &jo, std::string_vi
             } else {
                 eoc_list.entries.emplace_back( static_cast<int>( i ), display, eoc_keys[i], name, description );
             }
+
+            if( selector_dump_enabled ) {
+                dumped_selector_entry e;
+                e.name = name;
+                e.description = description;
+                e.selectable = display;
+                e.key = eoc_keys.empty() ? std::string() : std::string( 1, eoc_keys[i] );
+                dumped.emplace_back( e );
+            }
+        }
+
+        if( selector_dump_enabled ) {
+            write_selector_dump( eoc_list.text, dumped );
         }
 
         if( eoc_list.entries.empty() ) {
