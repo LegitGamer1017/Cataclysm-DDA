@@ -1083,6 +1083,24 @@ void run_game_loop( cli_opts &cli )
             set_selector_dry_run( true );
             set_selector_dump_enabled( true );
             const effect_on_condition_id eoc( cli.selector_run );
+            // A marker, so a missing dump can be told apart from "no selector was built": it is
+            // written whenever the hook is *reached*, and mcp_selector.json appears only if the
+            // EOC actually ran a selector.  Absent marker = the hook never ran (a UI blocked the
+            // load first), which reads very differently from a gated EOC.
+            try {
+                const cata_path marker =
+                    PATH_INFO::world_base_save_path() / "mcp_selector.run.json";
+                std::ofstream mout( marker.get_unrelative_path(), std::ios::trunc );
+                if( mout.is_open() ) {
+                    JsonOut mjout( mout );
+                    mjout.start_object();
+                    mjout.member( "eoc", cli.selector_run );
+                    mjout.member( "valid", eoc.is_valid() );
+                    mjout.end_object();
+                }
+            } catch( const std::exception & ) {
+                // diagnostics are best effort
+            }
             if( eoc.is_valid() ) {
                 dialogue d( get_talker_for( get_avatar() ), nullptr );
                 eoc->activate( d );
@@ -1120,6 +1138,24 @@ void run_game_loop( cli_opts &cli )
             set_selector_dry_run( true );
             set_selector_dump_enabled( true );
             const effect_on_condition_id eoc( cli.selector_run );
+            // A marker, so a missing dump can be told apart from "no selector was built": it is
+            // written whenever the hook is *reached*, and mcp_selector.json appears only if the
+            // EOC actually ran a selector.  Absent marker = the hook never ran (a UI blocked the
+            // load first), which reads very differently from a gated EOC.
+            try {
+                const cata_path marker =
+                    PATH_INFO::world_base_save_path() / "mcp_selector.run.json";
+                std::ofstream mout( marker.get_unrelative_path(), std::ios::trunc );
+                if( mout.is_open() ) {
+                    JsonOut mjout( mout );
+                    mjout.start_object();
+                    mjout.member( "eoc", cli.selector_run );
+                    mjout.member( "valid", eoc.is_valid() );
+                    mjout.end_object();
+                }
+            } catch( const std::exception & ) {
+                // diagnostics are best effort
+            }
             if( eoc.is_valid() ) {
                 dialogue d( get_talker_for( get_avatar() ), nullptr );
                 eoc->activate( d );

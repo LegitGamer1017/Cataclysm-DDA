@@ -2051,6 +2051,7 @@ static void write_selector_dump( const std::string &title,
         JsonOut jsout( fout );
         jsout.start_object();
         jsout.member( "title", title );
+        jsout.member( "options_count", static_cast<int>( entries.size() ) );
         jsout.member( "options" );
         jsout.start_array();
         for( const dumped_selector_entry &e : entries ) {
