@@ -33,6 +33,14 @@ void set_dialogue_dump_enabled( bool enabled );
  */
 void set_selector_dump_enabled( bool enabled );
 
+/**
+ * When enabled, a `run_eoc_selector` menu is built for its dump only: it is not shown, nothing is
+ * chosen, and there is no cursor.  This is what `--selector-run <eoc_id>` uses, so a selector that
+ * is normally reached by activating a mutation can be inspected deterministically -- the mutation
+ * list's sort order decides which entry RETURN activates, so no key script can select it.
+ */
+void set_selector_dry_run( bool dry );
+
 namespace talk_function
 {
 

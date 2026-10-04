@@ -2019,10 +2019,16 @@ void set_dialogue_dump_enabled( bool enabled )
 // for.  Each build writes <world>/mcp_selector.json: the title and every option with its key,
 // description, whether it is selectable, and whether `hide_failing` removed it entirely.
 static bool selector_dump_enabled = false;
+static bool selector_dry_run = false;
 
 void set_selector_dump_enabled( bool enabled )
 {
     selector_dump_enabled = enabled;
+}
+
+void set_selector_dry_run( bool dry )
+{
+    selector_dry_run = dry;
 }
 
 struct dumped_selector_entry {
@@ -6869,6 +6875,15 @@ talk_effect_fun_t::func f_run_eoc_selector( const JsonObject &jo, std::string_vi
                 e.key = eoc_keys.empty() ? std::string() : std::string( 1, eoc_keys[i] );
                 dumped.emplace_back( e );
             }
+        }
+
+        if( selector_dry_run ) {
+            // --selector-run: build this menu for its dump, not for a player.  No cursor, no key
+            // script, no stall, and nothing is chosen -- which is the only deterministic way to
+            // see a selector that is normally reached by activating a mutation (the list's sort
+            // order decides which one RETURN activates, so a key script cannot select it).
+            write_selector_dump( eoc_list.text, dumped );
+            return;
         }
 
         if( selector_dump_enabled ) {

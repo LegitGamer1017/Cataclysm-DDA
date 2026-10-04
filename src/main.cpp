@@ -40,6 +40,9 @@
 #include "crash.h"
 #include "cursesdef.h"
 #include "debug.h"
+#include "dialogue.h"
+#include "effect_on_condition.h"
+#include "talker.h"
 #include "do_turn.h"
 #include "enums.h"
 #include "event.h"
@@ -290,6 +293,7 @@ struct cli_opts {
     bool selector_dump = false; /** write every run_eoc_selector menu to mcp_selector.json */
     std::string pocket_patch; /** apply this JSON pocket-settings patch after loading */
     std::string var_patch; /** apply this JSON character-state patch after loading */
+    std::string selector_run; /** run this selector EOC after loading, for its dump only */
     std::vector<std::string> widget_dump; /** render these widget ids into the snapshot */
     bool new_character = false; /** create a character non-interactively and start */
     bool snapshot = false; /** write a situation snapshot on the first turn */
@@ -419,6 +423,16 @@ cli_opts parse_commandline( int argc, const char **argv )
                 [&result]( int, const char ** ) -> int {
                     result.selector_dump = true;
                     return 0;
+                }
+            },
+            {
+                "--selector-run", "<effect_on_condition id>",
+                "Run this selector EOC after loading and write its menu to <world>/mcp_selector.json WITHOUT showing it (no cursor, nothing chosen)",
+                section_default,
+                1,
+                [&result]( int, const char **params ) -> int {
+                    result.selector_run = params[0];
+                    return 1;
                 }
             },
             {
@@ -1062,6 +1076,21 @@ void run_game_loop( cli_opts &cli )
         if( !cli.widget_dump.empty() ) {
             g->set_widget_dump_ids( cli.widget_dump );
         }
+        if( !cli.selector_run.empty() ) {
+            // Run a selector EOC for its dump alone.  This is the only deterministic way to see a
+            // menu that is normally reached by activating a mutation: the mutation list sorts by
+            // id, and RETURN activates the *selected* entry, so a key script cannot pick one.
+            set_selector_dry_run( true );
+            set_selector_dump_enabled( true );
+            const effect_on_condition_id eoc( cli.selector_run );
+            if( eoc.is_valid() ) {
+                dialogue d( get_talker_for( get_avatar() ), nullptr );
+                eoc->activate( d );
+            } else {
+                debugmsg( "selector-run: no effect_on_condition with id '%s'",
+                          cli.selector_run );
+            }
+        }
         if( cli.snapshot ) {
             g->request_snapshot();
         }
@@ -1083,6 +1112,21 @@ void run_game_loop( cli_opts &cli )
         }
         if( !cli.widget_dump.empty() ) {
             g->set_widget_dump_ids( cli.widget_dump );
+        }
+        if( !cli.selector_run.empty() ) {
+            // Run a selector EOC for its dump alone.  This is the only deterministic way to see a
+            // menu that is normally reached by activating a mutation: the mutation list sorts by
+            // id, and RETURN activates the *selected* entry, so a key script cannot pick one.
+            set_selector_dry_run( true );
+            set_selector_dump_enabled( true );
+            const effect_on_condition_id eoc( cli.selector_run );
+            if( eoc.is_valid() ) {
+                dialogue d( get_talker_for( get_avatar() ), nullptr );
+                eoc->activate( d );
+            } else {
+                debugmsg( "selector-run: no effect_on_condition with id '%s'",
+                          cli.selector_run );
+            }
         }
         if( cli.snapshot ) {
             g->request_snapshot();
