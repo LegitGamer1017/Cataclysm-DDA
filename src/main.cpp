@@ -294,6 +294,9 @@ struct cli_opts {
     std::string pocket_patch; /** apply this JSON pocket-settings patch after loading */
     std::string var_patch; /** apply this JSON character-state patch after loading */
     std::string selector_run; /** run this selector EOC after loading, for its dump only */
+    std::string eoc_run; /** run this EOC after loading, for its effects */
+    int advance_turns = 0; /** pass this many real game turns before the snapshot */
+    std::string advance_key = "."; /** the key a turn of waiting is bound to (see `wait`) */
     std::vector<std::string> widget_dump; /** render these widget ids into the snapshot */
     bool new_character = false; /** create a character non-interactively and start */
     bool snapshot = false; /** write a situation snapshot on the first turn */
@@ -432,6 +435,36 @@ cli_opts parse_commandline( int argc, const char **argv )
                 1,
                 [&result]( int, const char **params ) -> int {
                     result.selector_run = params[0];
+                    return 1;
+                }
+            },
+            {
+                "--eoc-run", "<effect_on_condition id>",
+                "Run this EOC after loading, for its effects (no UI, no trigger). Writes <world>/mcp_eoc.run.json",
+                section_default,
+                1,
+                [&result]( int, const char **params ) -> int {
+                    result.eoc_run = params[0];
+                    return 1;
+                }
+            },
+            {
+                "--advance-turns", "<n>",
+                "Pass this many real game turns (the wait key, run headlessly) before the snapshot, so per-hour mechanics can be observed",
+                section_default,
+                1,
+                [&result]( int, const char **params ) -> int {
+                    result.advance_turns = std::max( 0, atoi( params[0] ) );
+                    return 1;
+                }
+            },
+            {
+                "--advance-key", "<key>",
+                "The key bound to waiting for a turn (default '.', the shipped `wait` binding)",
+                section_default,
+                1,
+                [&result]( int, const char **params ) -> int {
+                    result.advance_key = params[0];
                     return 1;
                 }
             },
@@ -1109,6 +1142,44 @@ void run_game_loop( cli_opts &cli )
                           cli.selector_run );
             }
         }
+        if( !cli.eoc_run.empty() ) {
+            // Run any EOC for its effects, with no UI and no trigger: --selector-run generalised,
+            // so a scenario can test an EOC's effect without the screen that normally opens it.
+            const effect_on_condition_id eoc( cli.eoc_run );
+            try {
+                const cata_path marker = PATH_INFO::world_base_save_path() / "mcp_eoc.run.json";
+                std::ofstream mout( marker.get_unrelative_path(), std::ios::trunc );
+                if( mout.is_open() ) {
+                    JsonOut mjout( mout );
+                    mjout.start_object();
+                    mjout.member( "eoc", cli.eoc_run );
+                    mjout.member( "valid", eoc.is_valid() );
+                    mjout.end_object();
+                }
+            } catch( const std::exception & ) {
+                // diagnostics are best effort
+            }
+            if( eoc.is_valid() ) {
+                dialogue d( get_talker_for( get_avatar() ), nullptr );
+                eoc->activate( d );
+            } else {
+                debugmsg( "eoc-run: no effect_on_condition with id '%s'", cli.eoc_run );
+            }
+        }
+        if( cli.advance_turns > 0 ) {
+            // Pass real game turns the way a player waiting does: queue the wait key and run the
+            // turn loop, once per turn.  A calendar jump would not accrue anything (rates are per
+            // turn), and an in-game wait key is no substitute -- too slow, and a script's keys get
+            // eaten by the load.  This is what makes a per-hour mechanic assertable.
+            inp_mngr.inject_input_events( std::vector<std::string>(
+                                              static_cast<size_t>( cli.advance_turns ),
+                                              cli.advance_key ) );
+            for( int i = 0; i < cli.advance_turns; i++ ) {
+                if( g->do_turn() ) {
+                    break;
+                }
+            }
+        }
         if( cli.snapshot ) {
             g->request_snapshot();
         }
@@ -1162,6 +1233,44 @@ void run_game_loop( cli_opts &cli )
             } else {
                 debugmsg( "selector-run: no effect_on_condition with id '%s'",
                           cli.selector_run );
+            }
+        }
+        if( !cli.eoc_run.empty() ) {
+            // Run any EOC for its effects, with no UI and no trigger: --selector-run generalised,
+            // so a scenario can test an EOC's effect without the screen that normally opens it.
+            const effect_on_condition_id eoc( cli.eoc_run );
+            try {
+                const cata_path marker = PATH_INFO::world_base_save_path() / "mcp_eoc.run.json";
+                std::ofstream mout( marker.get_unrelative_path(), std::ios::trunc );
+                if( mout.is_open() ) {
+                    JsonOut mjout( mout );
+                    mjout.start_object();
+                    mjout.member( "eoc", cli.eoc_run );
+                    mjout.member( "valid", eoc.is_valid() );
+                    mjout.end_object();
+                }
+            } catch( const std::exception & ) {
+                // diagnostics are best effort
+            }
+            if( eoc.is_valid() ) {
+                dialogue d( get_talker_for( get_avatar() ), nullptr );
+                eoc->activate( d );
+            } else {
+                debugmsg( "eoc-run: no effect_on_condition with id '%s'", cli.eoc_run );
+            }
+        }
+        if( cli.advance_turns > 0 ) {
+            // Pass real game turns the way a player waiting does: queue the wait key and run the
+            // turn loop, once per turn.  A calendar jump would not accrue anything (rates are per
+            // turn), and an in-game wait key is no substitute -- too slow, and a script's keys get
+            // eaten by the load.  This is what makes a per-hour mechanic assertable.
+            inp_mngr.inject_input_events( std::vector<std::string>(
+                                              static_cast<size_t>( cli.advance_turns ),
+                                              cli.advance_key ) );
+            for( int i = 0; i < cli.advance_turns; i++ ) {
+                if( g->do_turn() ) {
+                    break;
+                }
             }
         }
         if( cli.snapshot ) {
