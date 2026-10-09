@@ -165,6 +165,7 @@ static const activity_id ACT_CHOP_PLANKS( "ACT_CHOP_PLANKS" );
 static const activity_id ACT_CHOP_TREE( "ACT_CHOP_TREE" );
 static const activity_id ACT_CHURN( "ACT_CHURN" );
 static const activity_id ACT_CLEAR_RUBBLE( "ACT_CLEAR_RUBBLE" );
+static const activity_id ACT_CLOSE_TILE( "ACT_CLOSE_TILE" );
 static const activity_id ACT_CONSUME( "ACT_CONSUME" );
 static const activity_id ACT_CRACKING( "ACT_CRACKING" );
 static const activity_id ACT_CRAFT( "ACT_CRAFT" );
@@ -221,6 +222,7 @@ static const activity_id ACT_MULTIPLE_MOP( "ACT_MULTIPLE_MOP" );
 static const activity_id ACT_MULTIPLE_READ( "ACT_MULTIPLE_READ" );
 static const activity_id ACT_MULTIPLE_STUDY( "ACT_MULTIPLE_STUDY" );
 static const activity_id ACT_OPEN_GATE( "ACT_OPEN_GATE" );
+static const activity_id ACT_OPEN_TILE( "ACT_OPEN_TILE" );
 static const activity_id ACT_OPERATION( "ACT_OPERATION" );
 static const activity_id ACT_OXYTORCH( "ACT_OXYTORCH" );
 static const activity_id ACT_PICKAXE( "ACT_PICKAXE" );
@@ -306,6 +308,7 @@ static const fault_id fault_fail_to_feed( "fault_fail_to_feed" );
 static const flag_id json_flag_ALWAYS_AIMED( "ALWAYS_AIMED" );
 static const flag_id json_flag_NO_RELOAD( "NO_RELOAD" );
 
+static const furn_str_id furn_f_crate_o( "f_crate_o" );
 static const furn_str_id furn_f_gunsafe_mj( "f_gunsafe_mj" );
 static const furn_str_id furn_f_gunsafe_ml( "f_gunsafe_ml" );
 static const furn_str_id furn_f_kiln_empty( "f_kiln_empty" );
@@ -912,7 +915,7 @@ void gunmod_remove_activity_actor::finish( player_activity &act, Character &who 
         return;
     }
     act.set_to_null();
-    gunmod_remove( who, *it_gun, *it_mod );
+    gunmod_remove( who, gun, *it_mod );
     it_gun->on_contents_changed();
 }
 
@@ -932,13 +935,13 @@ bool gunmod_remove_activity_actor::gunmod_unload( Character &who, item &gunmod )
     return !( gunmod.ammo_remaining( ) && !who.unload( loc, true ) );
 }
 
-void gunmod_remove_activity_actor::gunmod_remove( Character &who, item &gun, item &mod )
+void gunmod_remove_activity_actor::gunmod_remove( Character &who, item_location gun, item &mod )
 {
     if( !gunmod_unload( who, mod ) ) {
         return;
     }
 
-    gun.gun_set_mode( gun_mode_DEFAULT );
+    gun->gun_set_mode( gun_mode_DEFAULT );
     const itype *modtype = mod.type;
 
     who.i_add_or_drop( mod );
@@ -946,7 +949,7 @@ void gunmod_remove_activity_actor::gunmod_remove( Character &who, item &gun, ite
 
     //~ %1$s - gunmod, %2$s - gun.
     who.add_msg_if_player( _( "You remove your %1$s from your %2$s." ), modtype->nname( 1 ),
-                           gun.tname() );
+                           gun->tname() );
 }
 
 void gunmod_remove_activity_actor::serialize( JsonOut &jsout ) const
@@ -3750,12 +3753,6 @@ std::unique_ptr<activity_actor> ebooksave_activity_actor::deserialize( JsonValue
 
     JsonObject data = jsin.get_object();
     data.read( "books", actor.books );
-    if( data.has_member( "book" ) ) {
-        // legacy compatibility: in 0.G, this activity only handled one book each
-        item_location book;
-        data.read( "book", book );
-        actor.books.push_back( book );
-    }
     data.read( "ereader", actor.ereader );
     data.read( "handled_books", actor.handled_books );
     data.read( "turns_left_on_current_book", actor.turns_left_on_current_book );
@@ -3796,6 +3793,31 @@ std::string enum_to_string<efile_combo>( efile_combo data )
             // *INDENT-OFF*
         case efile_combo::COMBO_MOVE_ONTO_BROWSE: return "COMBO_MOVE_ONTO_BROWSE";
         case efile_combo::COMBO_NONE: return "COMBO_NONE";
+            // *INDENT-ON*
+        default:
+            cata_fatal( "Invalid based_on_type in enum_to_string" );
+    }
+}
+template<>
+std::string enum_to_string<open_tile_result>( open_tile_result data )
+{
+    switch( data ) {
+            // *INDENT-OFF*
+        case open_tile_result::OPEN_DOOR: return "OPEN_DOOR";
+        case open_tile_result::OPEN_VEHICLE_SINGLE: return "OPEN_VEHICLE_SINGLE";
+        case open_tile_result::OPEN_VEHICLE_ALL: return "OPEN_VEHICLE_ALL";
+            // *INDENT-ON*
+        default:
+            cata_fatal( "Invalid based_on_type in enum_to_string" );
+    }
+}
+template<>
+std::string enum_to_string<close_tile_result>( close_tile_result data )
+{
+    switch( data ) {
+            // *INDENT-OFF*
+        case close_tile_result::CLOSE_DOOR: return "CLOSE_DOOR";
+        case close_tile_result::CLOSE_VEHICLE: return "CLOSE_VEHICLE";
             // *INDENT-ON*
         default:
             cata_fatal( "Invalid based_on_type in enum_to_string" );
@@ -4141,10 +4163,9 @@ item_location efile_activity_actor::find_external_transfer_estorage( Character &
     units::ememory largest_efile_size = efile->ememory_size();
     //search for fastest, large-enough, browsed, non-tool, estorage device in radius or on person
     units::ememory fastest_rate = 0_KB;
-    const std::function<bool( const item *it, const item * )> func = [&]( const item * it,
-    const item * ) {
+    const std::function<bool( item_location )> func = [&]( item_location it ) {
         return it->is_browsed() &&
-               !edevice_has_use( it ) && //is not a usable e-device (e.g. a USB drive)
+               !edevice_has_use( it.get_item() ) && //is not a usable e-device (e.g. a USB drive)
                it->is_estorage() &&
                it->remaining_ememory() >= largest_efile_size &&
                it->is_tool();
@@ -4455,8 +4476,8 @@ void atm_activity_actor::do_turn( player_activity &act, Character &who )
         } );
 
         // get first physical cash item; deposit exactly one bill per turn
-        item *cash_item = nullptr;
-        who.visit_items( [&]( item * e, const item * ) {
+        item_location cash_item;
+        who.visit_items( [&]( item_location e ) {
             if( e->type->has_flag( flag_OLD_CURRENCY ) ) {
                 cash_item = e;
                 return VisitResponse::ABORT;
@@ -4480,7 +4501,7 @@ void atm_activity_actor::do_turn( player_activity &act, Character &who )
         if( cash_item->charges > 1 ) {
             cash_item->charges--;
         } else {
-            item_location( who, cash_item ).remove_item();
+            cash_item.remove_item();
         }
         destination_cash_card->ammo_set( destination_cash_card->ammo_default(),
                                          destination_cash_card->ammo_remaining() + value );
@@ -5772,6 +5793,311 @@ std::unique_ptr<activity_actor> open_gate_activity_actor::deserialize( JsonValue
     return actor.clone();
 }
 
+void open_tile_activity_actor::start( player_activity &act, Character &who )
+{
+    act.moves_total = to_moves<int>( 1_seconds );
+    act.moves_left = act.moves_total;
+
+    map &here = get_map();
+
+    avatar &player_character = get_avatar();
+    if( !tile_location ) {
+        tile_location = choose_adjacent_highlight( here, _( "Open where?" ),
+                        pgettext( "no door, gate, curtain, etc.", "There is nothing that can be opened nearby." ),
+                        ACTION_OPEN, false );
+    }
+
+    // no valid tile selected or provided
+    if( !tile_location ) {
+        act.set_to_null();
+        return;
+    }
+
+    const tripoint_bub_ms openp = *tile_location;
+    if( const optional_vpart_position vp = here.veh_at( openp ) ) {
+        vehicle *const veh = &vp->vehicle();
+
+        // vehicle theft denied
+        if( !veh->handle_potential_theft( who ) ) {
+            act.set_to_null();
+            return;
+        }
+
+        // Check if vehicle has a part here that can be opened
+        opened_vehicle_part = veh->next_part_to_open( vp->part_index() );
+        if( opened_vehicle_part >= 0 ) {
+            // If player is inside vehicle, open the door/window/curtain
+            const vehicle *player_veh = veh_pointer_or_null( here.veh_at( who.pos_bub() ) );
+            const std::string part_name = veh->part( opened_vehicle_part ).name();
+            bool outside = !player_veh || player_veh != veh;
+            if( !outside ) {
+                open_success = open_tile_result::OPEN_VEHICLE_SINGLE;
+            } else {
+                // Outside means we check if there's anything in that tile outside-openable.
+                // If there is, we open everything on tile. This means opening a closed,
+                // curtained door from outside is possible, but it will magically open the
+                // curtains as well.
+                int outside_openable = veh->next_part_to_open( vp->part_index(), true );
+                if( outside_openable == -1 ) {
+                    add_msg( m_info, _( "That %s can only be opened from the inside." ), part_name );
+                    act.set_to_null();
+                    return;
+                } else {
+                    open_success = open_tile_result::OPEN_VEHICLE_ALL;
+                }
+            }
+        } else {
+            // If there are any OPENABLE parts here, they must be already open or locked
+            if( const std::optional<vpart_reference> openable_part = vp.part_with_feature( "OPENABLE",
+                    true ); openable_part.has_value() ) {
+                const std::string name = openable_part->info().name();
+                if( vp->vehicle().part( openable_part->part_index() ).locked ) {
+                    add_msg( m_info, _( "That %s is locked." ), name );
+                } else {
+                    add_msg( m_info, _( "That %s is already open." ), name );
+                }
+            }
+            act.set_to_null();
+            return;
+        }
+    } else {
+        // Not a vehicle part, just a regular door
+        bool could_open_door = here.open_door( player_character, openp,
+                                               !here.is_outside( player_character.pos_bub() ), true );
+        if( !could_open_door ) {
+            const ter_str_id tid = here.ter( openp ).id();
+
+            if( here.has_flag( ter_furn_flag::TFLAG_LOCKED, openp ) ) {
+                add_msg( m_info, _( "The door is locked!" ) );
+                act.set_to_null();
+                return;
+            } else if( tid.obj().close ) {
+                // if the following message appears unexpectedly, the prior check was for t_door_o
+                add_msg( m_info, _( "The door is already open." ) );
+                act.set_to_null();
+                return;
+            }
+            add_msg( m_info, _( "No door there." ) );
+            act.set_to_null();
+        }
+        open_success = open_tile_result::OPEN_DOOR;
+    }
+}
+
+void open_tile_activity_actor::finish( player_activity &act, Character &who )
+{
+    map &here = get_map();
+
+    const tripoint_bub_ms openp = *tile_location;
+
+    if( open_success == open_tile_result::OPEN_FAIL ) {
+        debugmsg( "invalid open_tile_activity_actor finish state" );
+        act.set_to_null();
+        return;
+    }
+
+    if( open_success == open_tile_result::OPEN_DOOR ) {
+        who.add_msg_if_player( _( "You open the %s." ), here.name( openp ) );
+        here.open_door( who, openp,
+                        !here.is_outside( who.pos_bub() ) );
+    } else if( optional_vpart_position vp = here.veh_at( *tile_location ) ) {
+        vehicle *const veh = &vp->vehicle();
+        const std::string part_name = veh->part( opened_vehicle_part ).name();
+
+        switch( open_success ) {
+            case open_tile_result::OPEN_VEHICLE_SINGLE: {
+                who.add_msg_if_player( _( "You open the %1$s's %2$s." ), veh->name, part_name );
+                veh->open( here, opened_vehicle_part );
+                break;
+            }
+            case open_tile_result::OPEN_VEHICLE_ALL: {
+                who.add_msg_if_player( _( "You open the %1$s's %2$s." ), veh->name, part_name );
+                veh->open_all_at( here, opened_vehicle_part );
+                break;
+            }
+            default:
+                debugmsg( "invalid open_tile_activity_actor finish state" );
+        }
+    }
+    act.set_to_null();
+}
+
+void open_tile_activity_actor::serialize( JsonOut &jsout ) const
+{
+    jsout.start_object();
+
+    jsout.member( "tile_location", tile_location );
+    jsout.member( "open_success", open_success );
+    jsout.member( "opened_vehicle_part", opened_vehicle_part );
+
+    jsout.end_object();
+}
+
+std::unique_ptr<activity_actor> open_tile_activity_actor::deserialize( JsonValue &jsin )
+{
+    open_tile_activity_actor actor;
+
+    JsonObject data = jsin.get_object();
+
+    data.read( "tile_location", actor.tile_location );
+    data.read( "open_success", actor.open_success );
+    data.read( "opened_vehicle_part", actor.opened_vehicle_part );
+
+    return actor.clone();
+}
+
+void close_tile_activity_actor::start( player_activity &act, Character &who )
+{
+    act.moves_total = 90; // TODO: Vary this? Based on strength, broken legs, and so on.
+    map &here = get_map();
+
+    const bool inside = !here.is_outside( who.pos_bub() );
+    const tripoint_bub_ms closep = tile_location;
+
+    if( doors::check_mon_blocking_door( who, here.get_abs( closep ) ) ) {
+        act.set_to_null();
+        return;
+    }
+
+    if( optional_vpart_position vp = here.veh_at( closep ) ) {
+        // There is a vehicle part here; see if it has anything that can be closed
+        vehicle *const veh = &vp->vehicle();
+        const int vpart = vp->part_index();
+        closed_vehicle_part = veh->next_part_to_close( vpart,
+                              veh_pointer_or_null( here.veh_at( who.pos_bub() ) ) != veh );
+        const int inside_closable = veh->next_part_to_close( vpart );
+        const int openable = veh->next_part_to_open( vpart );
+        if( closed_vehicle_part >= 0 ) {
+            if( !veh->handle_potential_theft( get_avatar() ) ) {
+                act.set_to_null();
+                return;
+            }
+            if( veh->can_close( closed_vehicle_part, who ) ) {
+                close_success = close_tile_result::CLOSE_VEHICLE;
+                act.moves_left = act.moves_total;
+                return;
+            }
+        } else if( inside_closable >= 0 ) {
+            who.add_msg_if_player( m_info, _( "That %s can only be closed from the inside." ),
+                                   veh->part( inside_closable ).name() );
+        } else if( openable >= 0 ) {
+            who.add_msg_if_player( m_info, _( "That %s is already closed." ),
+                                   veh->part( openable ).name() );
+        } else {
+            who.add_msg_if_player( m_info, _( "You cannot close the %s." ), veh->part( vpart ).name() );
+        }
+        act.set_to_null();
+        return;
+    } else if( here.furn( closep ) == furn_f_crate_o ) {
+        who.add_msg_if_player( m_info, _( "You'll need to construct a seal to close the crate!" ) );
+        act.set_to_null();
+        return;
+    } else if( !here.close_door( closep, inside, true ) ) {
+        if( here.close_door( closep, true, true ) ) {
+            who.add_msg_if_player( m_info,
+                                   _( "You cannot close the %s from outside.  You must be inside the building." ),
+                                   here.name( closep ) );
+        } else {
+            who.add_msg_if_player( m_info, _( "You cannot close the %s." ), here.name( closep ) );
+        }
+        act.set_to_null();
+        return;
+    } else {
+        map_stack items_in_way = here.i_at( closep );
+        // Scoot up to 25 liters of items out of the way
+        if( here.furn( closep ) != furn_f_safe_o && !items_in_way.empty() ) {
+            const units::volume max_nudge = 25_liter;
+
+            const auto toobig = std::find_if( items_in_way.begin(), items_in_way.end(),
+            [&max_nudge]( const item & it ) {
+                return it.volume() > max_nudge;
+            } );
+            if( toobig != items_in_way.end() ) {
+                who.add_msg_if_player( m_info, _( "The %s is too big to just nudge out of the way." ),
+                                       toobig->tname() );
+                act.set_to_null();
+                return;
+            } else if( items_in_way.stored_volume() > max_nudge ) {
+                who.add_msg_if_player( m_info, _( "There is too much stuff in the way." ) );
+                act.set_to_null();
+                return;
+            }
+            act.moves_total += std::min( items_in_way.stored_volume() / ( max_nudge / 50 ), 100 );
+        }
+        close_success = close_tile_result::CLOSE_DOOR;
+    }
+
+    act.moves_left = act.moves_total;
+}
+
+void close_tile_activity_actor::finish( player_activity &act, Character &who )
+{
+    map &here = get_map();
+    const tripoint_bub_ms closep = tile_location;
+    const bool inside = !here.is_outside( who.pos_bub() );
+    map_stack items_in_way = here.i_at( closep );
+
+    if( close_success == close_tile_result::CLOSE_FAIL ) {
+        debugmsg( "invalid close_tile_activity_actor finish state" );
+        act.set_to_null();
+        return;
+    }
+
+    if( close_success == close_tile_result::CLOSE_VEHICLE ) {
+        optional_vpart_position vp = here.veh_at( closep );
+        // There is a vehicle part here; see if it has anything that can be closed
+        vehicle *const veh = &vp->vehicle();
+        who.add_msg_if_player( _( "You close the %1$s's %2$s." ), veh->name,
+                               veh->part( closed_vehicle_part ).name() );
+        // close vehicle part
+        veh->close( here, closed_vehicle_part );
+    } else if( close_success == close_tile_result::CLOSE_DOOR ) {
+
+        const std::string door_name = here.obstacle_name( closep );
+        who.add_msg_if_player( _( "You close the %s." ), door_name );
+        here.close_door( closep, inside, false );
+        // push items if necessary
+        if( !items_in_way.empty() ) {
+            who.add_msg_if_player( m_info, _( "You push the %s out of the way." ),
+                                   items_in_way.size() == 1 ? items_in_way.only_item().tname() : _( "stuff" ) );
+
+            if( here.has_flag( ter_furn_flag::TFLAG_NOITEM, closep ) ) {
+                // Just plopping items back on their origin square will displace them to adjacent squares
+                // since the door is closed now.
+                for( item &elem : items_in_way ) {
+                    here.add_item_or_charges( closep, elem );
+                }
+                here.i_clear( closep );
+            }
+        }
+    }
+    act.set_to_null();
+}
+
+void close_tile_activity_actor::serialize( JsonOut &jsout ) const
+{
+    jsout.start_object();
+
+    jsout.member( "tile_location", tile_location );
+    jsout.member( "close_success", close_success );
+    jsout.member( "closed_vehicle_part", closed_vehicle_part );
+
+    jsout.end_object();
+}
+
+std::unique_ptr<activity_actor> close_tile_activity_actor::deserialize( JsonValue &jsin )
+{
+    close_tile_activity_actor actor;
+
+    JsonObject data = jsin.get_object();
+
+    data.read( "tile_location", actor.tile_location );
+    data.read( "close_success", actor.close_success );
+    data.read( "closed_vehicle_part", actor.closed_vehicle_part );
+
+    return actor.clone();
+}
+
 void consume_activity_actor::start( player_activity &act, Character &guy )
 {
     int moves = 0;
@@ -6124,7 +6450,7 @@ void unload_activity_actor::unload( Character &who, item_location &target )
                     handler.unseal_pocket_containing( item_location( target, contained ) );
                 }
                 if( consumed ) {
-                    it.remove_item( *contained );
+                    target.remove_item( *contained );
                 }
             }
 
@@ -6144,20 +6470,25 @@ void unload_activity_actor::unload( Character &who, item_location &target )
         return;
     }
 
-    std::vector<item *> remove_contained;
-    for( item *contained : it.all_items_top() ) {
+    std::vector<item_location> remove_contained;
+    it.visit_contents(
+    [&]( item_location contained ) {
         if( contained->ammo_type() == ammo_plutonium ) {
             contained->charges /= PLUTONIUM_CHARGES;
         }
-        if( who.add_or_drop_with_msg( *contained, true, &it, contained ) ) {
+        if( who.add_or_drop_with_msg( *contained, true, &it, contained.get_item() ) ) {
             qty += contained->charges;
             remove_contained.push_back( contained );
             actually_unloaded = true;
         }
-    }
+
+        return VisitResponse::SKIP;
+    },
+    target, {pocket_type::CONTAINER, pocket_type::MAGAZINE, pocket_type::MAGAZINE_WELL}
+    );
     // remove the ammo leads in the belt
-    for( item *remove : remove_contained ) {
-        it.remove_item( *remove );
+    for( item_location remove : remove_contained ) {
+        target.remove_item( *remove );
         actually_unloaded = true;
     }
 
@@ -9358,7 +9689,7 @@ void prying_activity_actor::start( player_activity &act, Character &who )
         return;
     }
 
-    if( prying_nails && !tool->has_quality( qual_PRYING_NAIL ) ) {
+    if( prying_nails && !tool.has_quality( qual_PRYING_NAIL ) ) {
         who.add_msg_if_player( _( "You can't use your %1$s to pry up the nails." ), tool->tname() );
         act.set_to_null();
         return;
@@ -10448,7 +10779,7 @@ void firstaid_activity_actor::finish( player_activity &act, Character &who )
         it.remove_item();
     } else if( used_tool->is_medication() ) {
         if( !it->count_by_charges() ||
-            it->use_charges( it->typeId(), charges_consumed, used, it.pos_bub( here ) ) ) {
+            it->use_charges( it, it->typeId(), charges_consumed, used, it.pos_bub( here ) ) ) {
             it.remove_item();
         }
     } else if( used_tool->is_tool() ) {
@@ -11325,8 +11656,14 @@ void unload_loot_activity_actor::stage_do( player_activity &, Character &you )
 
         const std::unordered_set<tripoint_abs_ms> dest_set;
 
+        item_location loc;
+        if( it->second ) {
+            loc = item_location( vehicle_cursor( vp->vehicle(), vp->part_index() ), it->first );
+        } else {
+            loc = item_location( map_cursor( src ), it->first );
+        }
         zone_sorting::unload_item( you, src,
-                                   zone_unload_options, it->second ? vp : std::nullopt, it->first, dest_set,
+                                   zone_unload_options, it->second ? vp : std::nullopt, loc, dest_set,
                                    num_processed );
 
         if( you.get_moves() <= 0 ) {
@@ -14303,8 +14640,15 @@ void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
             }
         }
 
+
+        item_location loc;
+        if( it->second ) {
+            loc = item_location( vehicle_cursor( vp->vehicle(), vp->part_index() ), it->first );
+        } else {
+            loc = item_location( map_cursor( src ), it->first );
+        }
         std::optional<bool> move_and_reset = zone_sorting::unload_item( you, src,
-                                             zone_unload_options, it->second ? vp : std::nullopt, it->first, dest_set, num_processed );
+                                             zone_unload_options, it->second ? vp : std::nullopt, loc, dest_set, num_processed );
         // out of moves, or unloaded item container was destroyed or prompted an activity restart
         if( !move_and_reset ) {
             return;
@@ -15010,6 +15354,7 @@ deserialize_functions = {
     { ACT_CHOP_TREE, &chop_tree_activity_actor::deserialize },
     { ACT_CHURN, &churn_activity_actor::deserialize },
     { ACT_CLEAR_RUBBLE, &clear_rubble_activity_actor::deserialize },
+    { ACT_CLOSE_TILE, &close_tile_activity_actor::deserialize },
     { ACT_CONSUME, &consume_activity_actor::deserialize },
     { ACT_CRACKING, &safecracking_activity_actor::deserialize },
     { ACT_CRAFT, &craft_activity_actor::deserialize },
@@ -15066,6 +15411,7 @@ deserialize_functions = {
     { ACT_MULTIPLE_READ, &multi_read_activity_actor::deserialize },
     { ACT_MULTIPLE_STUDY, &multi_study_activity_actor::deserialize },
     { ACT_OPEN_GATE, &open_gate_activity_actor::deserialize },
+    { ACT_OPEN_TILE, &open_tile_activity_actor::deserialize },
     { ACT_OPERATION, &bionic_operation_activity_actor::deserialize },
     { ACT_OXYTORCH, &oxytorch_activity_actor::deserialize },
     { ACT_PICKAXE, &pickaxe_activity_actor::deserialize },
