@@ -6,11 +6,14 @@
 #include "character.h"
 #include "dialogue.h"
 #include "effect_on_condition.h"
+#include "faction.h"
 #include "game.h"
 #include "item.h"
 #include "itype.h"
 #include "map_helpers.h"
+#include "mission.h"
 #include "mongroup.h"
+#include "npc_class.h"
 #include "player_helpers.h"
 #include "talker.h"
 #include "type_id.h"
@@ -41,6 +44,15 @@ static const oter_str_id oter_scp_1499_wasteland( "scp_1499_wasteland" );
 
 static const effect_on_condition_id eoc_scp_1499_enter( "EOC_SCP_1499_ENTER" );
 static const effect_on_condition_id eoc_scp_1162_use( "EOC_SCP_1162_USE" );
+
+// Endgame foundation (see FOUNDATION_DESIGN.md): the Foundation outpost and its ruined variant,
+// the remnant faction / sentry class, and the starter quest.
+static const oter_str_id oter_scp_foundation_outpost( "scp_foundation_outpost" );
+static const oter_str_id oter_scp_foundation_outpost_ruined( "scp_foundation_outpost_ruined" );
+static const faction_id faction_scp_foundation_remnants( "scp_foundation_remnants" );
+static const npc_class_id npc_class_scp_foundation_sentry( "NC_SCP_FOUNDATION_SENTRY" );
+static const mission_type_id mission_scp_foundation_log( "MISSION_SCP_FOUNDATION_LOG" );
+static const effect_on_condition_id eoc_scp_foundation_log_recovered( "EOC_SCP_FOUNDATION_LOG_RECOVERED" );
 
 // Every case is a no-op on a checkout that does not have `scps` loaded, so the
 // suite can live in the shared test binary without disturbing other runs
@@ -120,4 +132,21 @@ TEST_CASE( "scps_1499_enter_applies_dimension_effect", "[scps]" )
 
     CHECK( eoc_scp_1499_enter->activate( d ) );
     CHECK( you.has_effect( effect_scp_1499_dimension ) );
+}
+
+// The endgame foundation must all register when the mod is loaded: the outpost and its ruined
+// variant, the remnant faction, the sentry class, the starter quest, and its completion EOC.
+// A rename or a broken cross-reference here would silently drop the whole facilities/factions/
+// quests layer, so this pins it.
+TEST_CASE( "scps_foundation_slice_is_registered", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    CHECK( oter_scp_foundation_outpost.is_valid() );
+    CHECK( oter_scp_foundation_outpost_ruined.is_valid() );
+    CHECK( faction_scp_foundation_remnants.is_valid() );
+    CHECK( npc_class_scp_foundation_sentry.is_valid() );
+    CHECK( mission_scp_foundation_log.is_valid() );
+    CHECK( eoc_scp_foundation_log_recovered.is_valid() );
 }
