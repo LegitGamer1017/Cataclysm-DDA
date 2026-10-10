@@ -74,6 +74,19 @@ static const oter_str_id oter_scp_1884_site59( "scp_1884_site59" );
 static const effect_on_condition_id eoc_scp_1884_takes_a_hand( "EOC_SCP_1884_TAKES_A_HAND" );
 static const effect_on_condition_id eoc_scp_1884_books_recovered( "EOC_SCP_1884_BOOKS_RECOVERED" );
 
+// SCP-9044: the hallway.  The far door, the marker tile the loop returns you to, the loop itself,
+// and the keepsakes and gift handed out along the way.
+static const oter_str_id oter_scp_9044_house( "scp_9044_house" );
+static const ter_str_id ter_scp_9044_door( "t_scp_9044_door" );
+static const ter_str_id ter_scp_9044_hall_start( "t_scp_9044_hall_start" );
+static const efftype_id effect_scp_9044_cold( "effect_scp_9044_cold" );
+static const efftype_id effect_scp_9044_touched( "effect_scp_9044_touched" );
+static const itype_id itype_scp_9044_gift( "scp_9044_housewarming_gift" );
+static const itype_id itype_scp_9044_card( "scp_9044_housewarming_card" );
+static const itype_id itype_scp_9044_album( "scp_9044_photo_album" );
+static const itype_id itype_note_9044( "scp_foundation_note_9044" );
+static const effect_on_condition_id eoc_scp_9044_step( "EOC_SCP_9044_STEP" );
+
 // SCP-494: the gloves and the material trades they enable.
 static const itype_id itype_scp_494( "scp_494" );
 static const flag_id flag_SCP_494( "SCP_494" );
@@ -513,4 +526,27 @@ TEST_CASE( "scps_1884_is_registered", "[scps]" )
 
     CHECK( mission_scp_1884_books.is_valid() );
     CHECK( itype_classic_literature.is_valid() );
+}
+
+// SCP-9044: the house, the hallway that does not end, and what it hands out along the way.  The
+// loop itself is two effects -- a terrain search for the marker tile and a teleport back to it --
+// so if the marker terrain, the far door's EOC, or any of the twenty-one stages' effects and
+// keepsakes fail to load, the hallway stops being a hallway.
+TEST_CASE( "scps_9044_is_registered", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    CHECK( oter_scp_9044_house.is_valid() );
+    CHECK( ter_scp_9044_hall_start.is_valid() );
+    REQUIRE( ter_scp_9044_door.is_valid() );
+    CHECK( eoc_scp_9044_step.is_valid() );
+
+    CHECK( effect_scp_9044_cold.is_valid() );
+    CHECK( effect_scp_9044_touched.is_valid() );
+
+    CHECK( itype_scp_9044_gift.is_valid() );
+    CHECK( itype_scp_9044_card.is_valid() );
+    CHECK( itype_scp_9044_album.is_valid() );
+    CHECK( itype_note_9044.is_valid() );
 }
