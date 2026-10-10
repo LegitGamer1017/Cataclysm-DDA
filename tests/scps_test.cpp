@@ -94,6 +94,16 @@ static const itype_id itype_scp_494_furry_disk( "scp_494_furry_disk" );
 static const itype_id itype_scp_494_lab_rat( "scp_494_lab_rat" );
 static const effect_on_condition_id eoc_scp_494_use( "EOC_SCP_494_USE" );
 
+// SCP-701: the manuscript, the Hanged King it summons, and the recital reward.
+static const itype_id itype_scp_701( "scp_701" );
+static const itype_id itype_scp_701_knife( "scp_701_knife" );
+static const flag_id flag_SCP_701( "SCP_701" );
+static const mtype_id mon_scp_701_1( "mon_scp_701_1" );
+static const efftype_id effect_scp_701_madness( "effect_scp_701_madness" );
+static const spell_id spell_scp_701_recital( "spell_scp_701_recital" );
+static const effect_on_condition_id eoc_scp_701_perform( "EOC_SCP_701_PERFORM" );
+static const effect_on_condition_id eoc_scp_701_event( "EOC_SCP_701_THE_EVENT" );
+
 // Every case is a no-op on a checkout that does not have `scps` loaded, so the
 // suite can live in the shared test binary without disturbing other runs
 // (the same guard style the other SCP cases use).
@@ -247,4 +257,32 @@ TEST_CASE( "scps_494_spawns_as_rare_lab_loot", "[scps]" )
     }
     CHECK( item_group::group_contains_item( item_group_id( "science" ), itype_scp_494 ) );
     CHECK( item_group::group_contains_item( item_group_id( "mut_lab" ), itype_scp_494 ) );
+}
+
+// SCP-701: the manuscript, its flag, the Hanged King it summons, the madness effect, the recital
+// reward spell, and the performance EOCs must all register when the mod is loaded.
+TEST_CASE( "scps_701_is_registered", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    REQUIRE( itype_scp_701.is_valid() );
+    CHECK( itype_scp_701->has_flag( flag_SCP_701 ) );
+    CHECK( itype_scp_701_knife.is_valid() );
+    CHECK( mon_scp_701_1.is_valid() );
+    CHECK( effect_scp_701_madness.is_valid() );
+    CHECK( spell_scp_701_recital.is_valid() );
+    CHECK( eoc_scp_701_perform.is_valid() );
+    CHECK( eoc_scp_701_event.is_valid() );
+}
+
+// The manuscript must turn up in the world: the library bookcase and household shelf groups carry
+// it, so a copy can be found rather than only wished up.
+TEST_CASE( "scps_701_spawns_in_library_loot", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    CHECK( item_group::group_contains_item( item_group_id( "SUS_fiction_bookcase" ), itype_scp_701 ) );
+    CHECK( item_group::group_contains_item( item_group_id( "homebooks" ), itype_scp_701 ) );
 }
