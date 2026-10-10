@@ -4,6 +4,7 @@
 #include "avatar.h"
 #include "cata_catch.h"
 #include "character.h"
+#include "coordinates.h"
 #include "dialogue.h"
 #include "effect_on_condition.h"
 #include "faction.h"
@@ -11,6 +12,7 @@
 #include "item.h"
 #include "item_group.h"
 #include "itype.h"
+#include "map.h"
 #include "map_helpers.h"
 #include "mission.h"
 #include "mongroup.h"
@@ -549,4 +551,59 @@ TEST_CASE( "scps_9044_is_registered", "[scps]" )
     CHECK( itype_scp_9044_card.is_valid() );
     CHECK( itype_scp_9044_album.is_valid() );
     CHECK( itype_note_9044.is_valid() );
+}
+
+// SCP-9044's loop, driven for real.  Examining the far door has to count one deeper, put the
+// player back on the marker tile at the head of the hallway, and -- at the two depths the log
+// marks -- rebuild the standing hallway around them.  Registration alone would not catch a
+// broken teleport target or an update mapgen that never applies.
+//
+// The teleport is checked as "you are standing on the marker", not "you are on this square":
+// u_location_variable's terrain search returns the nearest matching tile, which is not the same
+// square under every preceding test's map.  Where the player actually ends up relative to the
+// update mapgens' fixed squares is what the transform checks below pin down.
+TEST_CASE( "scps_9044_step_loops_and_transforms", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    clear_avatar();
+    clear_map_without_vision();
+    map &here = get_map();
+    avatar &you = get_avatar();
+
+    const tripoint_bub_ms hall_start( 20, 20, 0 );
+    const tripoint_bub_ms far_door( 20, 8, 0 );
+    here.ter_set( hall_start, ter_id( "t_scp_9044_hall_start" ) );
+    here.ter_set( far_door, ter_id( "t_scp_9044_door" ) );
+    you.setpos( here, far_door );
+
+    dialogue d( get_talker_for( you ), nullptr );
+
+    // The loop itself: one deeper, and back on the marker tile at the head of the hallway.
+    REQUIRE( eoc_scp_9044_step->activate( d ) );
+    CHECK( you.get_value( "scp_9044_depth" ) == 1 );
+    CHECK( here.ter( you.pos_bub() ) == ter_id( "t_scp_9044_hall_start" ) );
+
+    // The update mapgens write at fixed squares of the overmap tile the hall is on, so the
+    // tiles to inspect are that tile's corner plus the coordinates the update names.
+    const tripoint_bub_ms omt_corner = here.get_bub( project_to<coords::ms>( you.pos_abs_omt() ) );
+    const tripoint_bub_ms table_pos = omt_corner + tripoint( 11, 9, 0 );
+    const tripoint_bub_ms bench_pos = omt_corner + tripoint( 12, 9, 0 );
+
+    // "How cozy" -- the hallway stops being bare.
+    you.set_value( "scp_9044_depth", 7 );
+    you.setpos( here, far_door );
+    REQUIRE( eoc_scp_9044_step->activate( d ) );
+    CHECK( you.get_value( "scp_9044_depth" ) == 8 );
+    CHECK( here.furn( table_pos ) == furn_id( "f_table" ) );
+    CHECK( here.furn( bench_pos ) == furn_id( "f_bench" ) );
+
+    // "It's cold" -- furniture gone, and the boards gone with it.
+    you.set_value( "scp_9044_depth", 13 );
+    you.setpos( here, far_door );
+    REQUIRE( eoc_scp_9044_step->activate( d ) );
+    CHECK( you.get_value( "scp_9044_depth" ) == 14 );
+    CHECK( here.ter( table_pos ) == ter_id( "t_thconc_floor" ) );
+    CHECK( here.furn( table_pos ) == furn_id( "f_null" ) );
 }
