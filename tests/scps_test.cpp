@@ -9,6 +9,7 @@
 #include "faction.h"
 #include "game.h"
 #include "item.h"
+#include "item_group.h"
 #include "itype.h"
 #include "map_helpers.h"
 #include "mission.h"
@@ -234,4 +235,16 @@ TEST_CASE( "scps_494_gloves_and_trades_are_registered", "[scps]" )
     CHECK( itype_scp_494_furry_disk.is_valid() );
     CHECK( itype_scp_494_lab_rat.is_valid() );
     CHECK( eoc_scp_494_use.is_valid() );
+}
+
+// SCP-494 must be findable as a rare random find: injected into the science and mutagen-lab loot
+// groups.  A future edit that dropped the injection (or a silent overwrite of the group) would make
+// the gloves unobtainable short of wishing, so this pins it.
+TEST_CASE( "scps_494_spawns_as_rare_lab_loot", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    CHECK( item_group::group_contains_item( item_group_id( "science" ), itype_scp_494 ) );
+    CHECK( item_group::group_contains_item( item_group_id( "mut_lab" ), itype_scp_494 ) );
 }
