@@ -54,6 +54,15 @@ static const npc_class_id npc_class_scp_foundation_sentry( "NC_SCP_FOUNDATION_SE
 static const mission_type_id mission_scp_foundation_log( "MISSION_SCP_FOUNDATION_LOG" );
 static const effect_on_condition_id eoc_scp_foundation_log_recovered( "EOC_SCP_FOUNDATION_LOG_RECOVERED" );
 
+// SCP-494: the gloves and the material trades they enable.
+static const itype_id itype_scp_494( "scp_494" );
+static const flag_id flag_SCP_494( "SCP_494" );
+static const itype_id itype_scp_494_plastic_diamond( "scp_494_plastic_diamond" );
+static const itype_id itype_scp_494_diamond_sphere( "scp_494_diamond_sphere" );
+static const itype_id itype_scp_494_steel_keypad_box( "scp_494_steel_keypad_box" );
+static const itype_id itype_scp_494_micro_phone( "scp_494_micro_phone" );
+static const effect_on_condition_id eoc_scp_494_use( "EOC_SCP_494_USE" );
+
 // Every case is a no-op on a checkout that does not have `scps` loaded, so the
 // suite can live in the shared test binary without disturbing other runs
 // (the same guard style the other SCP cases use).
@@ -149,4 +158,20 @@ TEST_CASE( "scps_foundation_slice_is_registered", "[scps]" )
     CHECK( npc_class_scp_foundation_sentry.is_valid() );
     CHECK( mission_scp_foundation_log.is_valid() );
     CHECK( eoc_scp_foundation_log_recovered.is_valid() );
+}
+
+// SCP-494's gloves must register with their flag and the four trade results, and the activation
+// EOC must exist.  A rename or a broken copy-from would silently drop the anomaly.
+TEST_CASE( "scps_494_gloves_and_trades_are_registered", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    REQUIRE( itype_scp_494.is_valid() );
+    CHECK( itype_scp_494->has_flag( flag_SCP_494 ) );
+    CHECK( itype_scp_494_plastic_diamond.is_valid() );
+    CHECK( itype_scp_494_diamond_sphere.is_valid() );
+    CHECK( itype_scp_494_steel_keypad_box.is_valid() );
+    CHECK( itype_scp_494_micro_phone.is_valid() );
+    CHECK( eoc_scp_494_use.is_valid() );
 }
