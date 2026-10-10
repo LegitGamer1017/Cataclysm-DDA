@@ -14,6 +14,7 @@
 #include "map_helpers.h"
 #include "mission.h"
 #include "mongroup.h"
+#include "monster.h"
 #include "mtype.h"
 #include "npc_class.h"
 #include "player_helpers.h"
@@ -397,4 +398,72 @@ TEST_CASE( "scps_287_is_registered", "[scps]" )
     CHECK( spell_scp_287_rout.is_valid() );
     CHECK( eoc_scp_287_activate.is_valid() );
     CHECK( item_group::group_contains_item( item_group_id( "scp_287_mound_loot" ), itype_scp_287 ) );
+}
+
+// SCP-287's sword must not be a self-maiming weapon.  HURT_WHEN_WIELDED fires on a melee attack
+// (two swings in three) and deals the weapon's own cut damage to the right hand, ignoring gloves
+// (src/melee.cpp:2314-2323) -- on this cut-30 sword that is 30 cut to hand_r.  The handling hazard
+// belongs in the activation EOC, gated on the article's insulated gloves, and nowhere else.
+TEST_CASE( "scps_287_is_not_hurt_when_wielded", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    static const flag_id flag_hurt_when_wielded( "HURT_WHEN_WIELDED" );
+    static const flag_id flag_fragile_melee( "FRAGILE_MELEE" );
+    static const flag_id flag_no_repair( "NO_REPAIR" );
+    static const itype_id itype_battery( "battery" );
+
+    avatar &u = get_avatar();
+    item sword( itype_scp_287 );
+    CHECK_FALSE( sword.has_flag( flag_hurt_when_wielded ) );
+    CHECK( sword.has_flag( flag_fragile_melee ) );
+    CHECK( sword.has_flag( flag_no_repair ) );
+
+    // ...and it must not fire on a dead cell: `has_ammo` (ammo_sufficient) is what the EOC's
+    // guard reads, and it has to be false empty and true once there is a current.
+    CHECK_FALSE( sword.ammo_sufficient( &u ) );
+    sword.ammo_set( itype_battery, 1000 );
+    CHECK( sword.ammo_remaining() == 1000 );
+    CHECK( sword.ammo_sufficient( &u ) );
+}
+
+// The activation rides on the charge: a loaded sword fills the world with phantoms, a dead one
+// does nothing at all.  Insulated gloves are worn so the EOC takes its ghost branch rather than
+// the bare-hand shock.
+TEST_CASE( "scps_287_scales_phantoms_with_charge", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    static const itype_id itype_battery( "battery" );
+    static const itype_id itype_gloves_rubber( "gloves_rubber" );
+
+    clear_map();
+    avatar &u = get_avatar();
+    u.wear_item( item( itype_gloves_rubber ) );
+
+    const auto phantoms = []() {
+        int n = 0;
+        for( monster &m : g->all_monsters() ) {
+            if( m.is_hallucination() ) {
+                n++;
+            }
+        }
+        return n;
+    };
+
+    const int before = phantoms();
+
+    item_location loaded_loc = u.i_add( item( itype_scp_287 ) );
+    loaded_loc->ammo_set( itype_battery, 1000 );
+    dialogue full( get_talker_for( u ), get_talker_for( loaded_loc ) );
+    eoc_scp_287_activate->activate( full );
+    const int after_full = phantoms();
+    CHECK( after_full > before );
+
+    item_location dead_loc = u.i_add( item( itype_scp_287 ) );
+    dialogue spent( get_talker_for( u ), get_talker_for( dead_loc ) );
+    eoc_scp_287_activate->activate( spent );
+    CHECK( phantoms() == after_full );
 }
