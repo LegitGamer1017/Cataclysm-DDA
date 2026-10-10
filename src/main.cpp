@@ -1177,35 +1177,55 @@ void run_game_loop( cli_opts &cli )
             // would hang the process inside this hook, which is exactly what a save-continuation
             // run did.  Stop when the queue is empty, and write how far it got so the caller can be
             // told rather than left guessing.
+            // The record is rewritten at every step, not once at the end.  A turn that blocks never
+            // returns here, so a single end-of-loop write leaves a hang indistinguishable from a
+            // run that never started advancing -- which is exactly how this was misread once.
             const int turn_before = to_turn<int>( calendar::turn );
+            auto write_advance = [&]( const std::string & phase ) {
+                try {
+                    const cata_path adv_out =
+                        PATH_INFO::world_base_save_path() / "mcp_advance.result.json";
+                    std::ofstream aout( adv_out.get_unrelative_path(), std::ios::trunc );
+                    if( aout.is_open() ) {
+                        const int advanced = to_turn<int>( calendar::turn ) - turn_before;
+                        const bool done = phase == "done";
+                        JsonOut ajout( aout );
+                        ajout.start_object();
+                        ajout.member( "requested", cli.advance_turns );
+                        ajout.member( "turns", advanced );
+                        ajout.member( "keys_left", inp_mngr.injected_input_remaining() );
+                        ajout.member( "phase", phase );
+                        // Only meaningful once the loop is done; mid-turn, fewer turns than
+                        // requested just means the rest are still to come.
+                        ajout.member( "stopped_early", done && advanced < cli.advance_turns );
+                        ajout.end_object();
+                    }
+                } catch( const std::exception & ) {
+                    // diagnostics are best effort
+                }
+            };
             inp_mngr.inject_input_events( std::vector<std::string>(
                                               static_cast<size_t>( cli.advance_turns ),
                                               cli.advance_key ) );
+            write_advance( "before-first-turn" );
             for( int i = 0; i < cli.advance_turns; i++ ) {
                 if( inp_mngr.injected_input_remaining() <= 0 ) {
-                    break;      // nothing left to answer a turn with; blocking here would hang
+                    // The queue is dry: something ate the keys and a further do_turn() would block
+                    // with nothing to answer it.  Stop, and let the record say where.
+                    //
+                    // This cannot rescue a turn that is already blocked *inside* do_turn() -- a
+                    // modal that owns the UI does that, and it is why a save which loads into a
+                    // menu (a crafting menu at a workbench, in the field) is not a candidate for
+                    // --advance-turns until that menu is answered.  The harness detects and reports
+                    // that case rather than waiting it out; see BUG-playtest-run-hang-FOLLOWUP.
+                    break;
                 }
+                write_advance( "in-turn-" + std::to_string( i ) );
                 if( g->do_turn() ) {
                     break;
                 }
             }
-            try {
-                const cata_path adv_out =
-                    PATH_INFO::world_base_save_path() / "mcp_advance.result.json";
-                std::ofstream aout( adv_out.get_unrelative_path(), std::ios::trunc );
-                if( aout.is_open() ) {
-                    const int advanced = to_turn<int>( calendar::turn ) - turn_before;
-                    JsonOut ajout( aout );
-                    ajout.start_object();
-                    ajout.member( "requested", cli.advance_turns );
-                    ajout.member( "turns", advanced );
-                    ajout.member( "keys_left", inp_mngr.injected_input_remaining() );
-                    ajout.member( "stopped_early", advanced < cli.advance_turns );
-                    ajout.end_object();
-                }
-            } catch( const std::exception & ) {
-                // diagnostics are best effort
-            }
+            write_advance( "done" );
         }
         if( cli.snapshot ) {
             g->request_snapshot();
@@ -1297,35 +1317,55 @@ void run_game_loop( cli_opts &cli )
             // would hang the process inside this hook, which is exactly what a save-continuation
             // run did.  Stop when the queue is empty, and write how far it got so the caller can be
             // told rather than left guessing.
+            // The record is rewritten at every step, not once at the end.  A turn that blocks never
+            // returns here, so a single end-of-loop write leaves a hang indistinguishable from a
+            // run that never started advancing -- which is exactly how this was misread once.
             const int turn_before = to_turn<int>( calendar::turn );
+            auto write_advance = [&]( const std::string & phase ) {
+                try {
+                    const cata_path adv_out =
+                        PATH_INFO::world_base_save_path() / "mcp_advance.result.json";
+                    std::ofstream aout( adv_out.get_unrelative_path(), std::ios::trunc );
+                    if( aout.is_open() ) {
+                        const int advanced = to_turn<int>( calendar::turn ) - turn_before;
+                        const bool done = phase == "done";
+                        JsonOut ajout( aout );
+                        ajout.start_object();
+                        ajout.member( "requested", cli.advance_turns );
+                        ajout.member( "turns", advanced );
+                        ajout.member( "keys_left", inp_mngr.injected_input_remaining() );
+                        ajout.member( "phase", phase );
+                        // Only meaningful once the loop is done; mid-turn, fewer turns than
+                        // requested just means the rest are still to come.
+                        ajout.member( "stopped_early", done && advanced < cli.advance_turns );
+                        ajout.end_object();
+                    }
+                } catch( const std::exception & ) {
+                    // diagnostics are best effort
+                }
+            };
             inp_mngr.inject_input_events( std::vector<std::string>(
                                               static_cast<size_t>( cli.advance_turns ),
                                               cli.advance_key ) );
+            write_advance( "before-first-turn" );
             for( int i = 0; i < cli.advance_turns; i++ ) {
                 if( inp_mngr.injected_input_remaining() <= 0 ) {
-                    break;      // nothing left to answer a turn with; blocking here would hang
+                    // The queue is dry: something ate the keys and a further do_turn() would block
+                    // with nothing to answer it.  Stop, and let the record say where.
+                    //
+                    // This cannot rescue a turn that is already blocked *inside* do_turn() -- a
+                    // modal that owns the UI does that, and it is why a save which loads into a
+                    // menu (a crafting menu at a workbench, in the field) is not a candidate for
+                    // --advance-turns until that menu is answered.  The harness detects and reports
+                    // that case rather than waiting it out; see BUG-playtest-run-hang-FOLLOWUP.
+                    break;
                 }
+                write_advance( "in-turn-" + std::to_string( i ) );
                 if( g->do_turn() ) {
                     break;
                 }
             }
-            try {
-                const cata_path adv_out =
-                    PATH_INFO::world_base_save_path() / "mcp_advance.result.json";
-                std::ofstream aout( adv_out.get_unrelative_path(), std::ios::trunc );
-                if( aout.is_open() ) {
-                    const int advanced = to_turn<int>( calendar::turn ) - turn_before;
-                    JsonOut ajout( aout );
-                    ajout.start_object();
-                    ajout.member( "requested", cli.advance_turns );
-                    ajout.member( "turns", advanced );
-                    ajout.member( "keys_left", inp_mngr.injected_input_remaining() );
-                    ajout.member( "stopped_early", advanced < cli.advance_turns );
-                    ajout.end_object();
-                }
-            } catch( const std::exception & ) {
-                // diagnostics are best effort
-            }
+            write_advance( "done" );
         }
         if( cli.snapshot ) {
             g->request_snapshot();
