@@ -106,6 +106,19 @@ static const mtype_id mon_scp_22_seek( "mon_scp_22_seek" );
 static const effect_on_condition_id eoc_scp_8000_seeker( "EOC_SCP_8000_SEEKER" );
 static const effect_on_condition_id eoc_scp_8000_push( "EOC_SCP_8000_PUSH" );
 
+// SCP-8000, Stage 2: the rift, Memory Lane, Wallace, and the unwritten book.
+static const oter_str_id oter_scp_8000_library( "scp_8000_library" );
+static const oter_str_id oter_scp_8000_reading_room( "scp_8000_reading_room" );
+static const ter_str_id ter_scp_8000_rift( "t_scp_8000_rift" );
+static const ter_str_id ter_scp_8000_rift_home( "t_scp_8000_rift_home" );
+static const ter_str_id ter_scp_8000_library_floor( "t_scp_8000_library_floor" );
+static const mtype_id mon_scp_8000_wallace( "mon_scp_8000_wallace" );
+static const itype_id itype_unwritten_book( "scp_8000_unwritten_book" );
+static const trait_id trait_second_chance_spent( "SCP_8000_SECOND_CHANCE_SPENT" );
+static const effect_on_condition_id eoc_scp_8000_rift( "EOC_SCP_8000_RIFT" );
+static const effect_on_condition_id eoc_scp_8000_rift_home( "EOC_SCP_8000_RIFT_HOME" );
+static const effect_on_condition_id eoc_scp_8000_book_saves_you( "EOC_SCP_8000_BOOK_SAVES_YOU" );
+
 // SCP-494: the gloves and the material trades they enable.
 static const itype_id itype_scp_494( "scp_494" );
 static const flag_id flag_SCP_494( "SCP_494" );
@@ -776,4 +789,50 @@ TEST_CASE( "scps_8000_seeker_scans_the_chain", "[scps]" )
     you.set_value( "scp_8000_scan", 10 );
     REQUIRE( eoc_scp_8000_seeker->activate( d ) );
     CHECK( you.get_value( "scp_8000_scan" ) == 11 );
+}
+
+// SCP-8000 Stage 2: the rift, Memory Lane, Wallace, and the book he gives you.  The registration
+// matters more than usual here, because half of Stage 2 lives in a dimension -- if the library
+// layer's terrain or its reading room fail to resolve, the rift sends the player into a world of
+// nothing at all.
+TEST_CASE( "scps_8000_wallace_is_registered", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    CHECK( oter_scp_8000_library.is_valid() );
+    CHECK( oter_scp_8000_reading_room.is_valid() );
+
+    CHECK( ter_scp_8000_rift.is_valid() );
+    CHECK( ter_scp_8000_rift_home.is_valid() );
+    CHECK( ter_scp_8000_library_floor.is_valid() );
+
+    REQUIRE( mon_scp_8000_wallace.is_valid() );
+    CHECK( itype_unwritten_book.is_valid() );
+    CHECK( trait_second_chance_spent.is_valid() );
+
+    CHECK( eoc_scp_8000_rift.is_valid() );
+    CHECK( eoc_scp_8000_rift_home.is_valid() );
+    CHECK( eoc_scp_8000_book_saves_you.is_valid() );
+}
+
+// The book is a carried item plus a PREVENT_DEATH EOC, and the limiter trait is what makes it a
+// once.  Driving the death itself headlessly is the one thing this suite cannot do honestly -- the
+// engine runs those EOCs from is_game_over, mid-turn, and simulating that faithfully is a
+// different kind of test.  What can be proven is the wiring: the book exists, carrying it is what
+// the EOC's condition reads, and the limiter it sets is a real trait that the avatar does not
+// start with.
+TEST_CASE( "scps_8000_book_is_a_carried_lifeline", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    clear_avatar();
+    avatar &you = get_avatar();
+
+    CHECK_FALSE( you.has_trait( trait_second_chance_spent ) );
+    CHECK( you.amount_of( itype_unwritten_book ) == 0 );
+
+    you.i_add( item( itype_unwritten_book ) );
+    CHECK( you.amount_of( itype_unwritten_book ) == 1 );
 }
