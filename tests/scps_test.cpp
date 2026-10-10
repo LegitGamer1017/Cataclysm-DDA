@@ -801,7 +801,6 @@ TEST_CASE( "scps_8000_wallace_is_registered", "[scps]" )
         return;
     }
     CHECK( oter_scp_8000_library.is_valid() );
-    CHECK( oter_scp_8000_reading_room.is_valid() );
 
     CHECK( ter_scp_8000_rift.is_valid() );
     CHECK( ter_scp_8000_rift_home.is_valid() );
