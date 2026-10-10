@@ -14,6 +14,7 @@
 #include "map_helpers.h"
 #include "mission.h"
 #include "mongroup.h"
+#include "mtype.h"
 #include "npc_class.h"
 #include "player_helpers.h"
 #include "talker.h"
@@ -103,6 +104,12 @@ static const efftype_id effect_scp_701_madness( "effect_scp_701_madness" );
 static const spell_id spell_scp_701_recital( "spell_scp_701_recital" );
 static const effect_on_condition_id eoc_scp_701_perform( "EOC_SCP_701_PERFORM" );
 static const effect_on_condition_id eoc_scp_701_event( "EOC_SCP_701_THE_EVENT" );
+
+// SCP-745: the highway hunter pair.
+static const mtype_id mon_scp_745( "mon_scp_745" );
+static const itype_id itype_scp_745_head( "scp_745_head" );
+static const flag_id flag_SCP_745( "SCP_745" );
+static const mongroup_id GROUP_SCP_745( "GROUP_SCP_745" );
 
 // Every case is a no-op on a checkout that does not have `scps` loaded, so the
 // suite can live in the shared test binary without disturbing other runs
@@ -285,4 +292,18 @@ TEST_CASE( "scps_701_spawns_in_library_loot", "[scps]" )
     }
     CHECK( item_group::group_contains_item( item_group_id( "SUS_fiction_bookcase" ), itype_scp_701 ) );
     CHECK( item_group::group_contains_item( item_group_id( "homebooks" ), itype_scp_701 ) );
+}
+
+// SCP-745: the luminous highway predator, its trophy head, and its nocturnal pair group must all
+// register when the mod is loaded.
+TEST_CASE( "scps_745_is_registered", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    REQUIRE( mon_scp_745.is_valid() );
+    CHECK( mon_scp_745->luminance > 0 );
+    CHECK( itype_scp_745_head.is_valid() );
+    CHECK( itype_scp_745_head->has_flag( flag_SCP_745 ) );
+    CHECK( GROUP_SCP_745.is_valid() );
 }
