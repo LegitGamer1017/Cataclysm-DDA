@@ -3,6 +3,7 @@
 
 #include "avatar.h"
 #include "cata_catch.h"
+#include "calendar.h"
 #include "character.h"
 #include "coordinates.h"
 #include "dialogue.h"
@@ -14,11 +15,14 @@
 #include "itype.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "mapgen_functions.h"
+#include "mapgendata.h"
 #include "mission.h"
 #include "mongroup.h"
 #include "monster.h"
 #include "mtype.h"
 #include "npc_class.h"
+#include "overmapbuffer.h"
 #include "player_helpers.h"
 #include "talker.h"
 #include "type_id.h"
@@ -606,4 +610,37 @@ TEST_CASE( "scps_9044_step_loops_and_transforms", "[scps]" )
     CHECK( you.get_value( "scp_9044_depth" ) == 14 );
     CHECK( here.ter( table_pos ) == ter_id( "t_thconc_floor" ) );
     CHECK( here.furn( table_pos ) == furn_id( "f_null" ) );
+}
+
+// SCP-9044's way out.  The loop teleports the player to the head of the hallway, and the SCP's
+// whole bargain is that turning around from there works.  This builds the real house from the
+// mod's mapgen -- forcing a map tile to scp_9044_house and loading it runs the mapgen -- and
+// checks the route at the mapgen's own coordinates: the marker tile the loop searches for, the
+// front door, the chain gate, and no wall anywhere along the column between them.  Doors and
+// gates open; walls do not, so "not a wall" is precisely what makes the escape possible.  This is
+// also the only test of the fence gate: without it the lot is sealed and the SCP is unreachable.
+TEST_CASE( "scps_9044_has_a_way_out", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    clear_avatar();
+    const tripoint_abs_omt where( get_avatar().pos_abs_omt() + tripoint( 4, 4, 0 ) );
+    tinymap tm;
+    tm.load( where, true );
+    // tinymap::load() gives a default OMT; the terrain's own mapgen has to be run explicitly.
+    // This is the sequence tests/mapgen_helpers.cpp uses for nested mapgens.
+    mapgendata md( where, *tm.cast_to_map(), 0.0f, calendar::turn, nullptr );
+    run_mapgen_func( oter_scp_9044_house.str(), md );
+
+    // The tiles the loop and the escape depend on, at the layout the mapgen writes.
+    CHECK( tm.ter( tripoint_omt_ms{ 11, 5, 0 } ) == ter_id( "t_scp_9044_door" ) );
+    CHECK( tm.ter( tripoint_omt_ms{ 11, 17, 0 } ) == ter_id( "t_scp_9044_hall_start" ) );
+    CHECK( tm.ter( tripoint_omt_ms{ 11, 18, 0 } ) == ter_id( "t_door_c" ) );
+    CHECK( tm.ter( tripoint_omt_ms{ 11, 21, 0 } ) == ter_id( "t_chaingate_c" ) );
+
+    // Down the hall to the front door, then across the drive to the gate in the fence.
+    for( int y = 6; y <= 20; y++ ) {
+        CHECK( tm.ter( tripoint_omt_ms{ 11, y, 0 } ) != ter_id( "t_wall_wood" ) );
+    }
 }
