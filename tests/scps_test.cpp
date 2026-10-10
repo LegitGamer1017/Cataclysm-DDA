@@ -93,6 +93,19 @@ static const itype_id itype_scp_9044_album( "scp_9044_photo_album" );
 static const itype_id itype_note_9044( "scp_foundation_note_9044" );
 static const effect_on_condition_id eoc_scp_9044_step( "EOC_SCP_9044_STEP" );
 
+// SCP-8000: Site-322, the SEEKER machine, and the four things it found.
+static const oter_str_id oter_scp_8000_site322( "scp_8000_site322" );
+static const ter_str_id ter_scp_8000_seeker( "t_scp_8000_seeker" );
+static const furn_str_id furn_scp_8000_console( "f_scp_8000_console" );
+static const furn_str_id furn_scp_8000_stabiliser( "f_scp_8000_stabiliser" );
+static const itype_id itype_note_8000( "scp_foundation_note_8000" );
+static const mtype_id mon_scp_01_seek( "mon_scp_01_seek" );
+static const mtype_id mon_scp_04_seek( "mon_scp_04_seek" );
+static const mtype_id mon_scp_13_seek( "mon_scp_13_seek" );
+static const mtype_id mon_scp_22_seek( "mon_scp_22_seek" );
+static const effect_on_condition_id eoc_scp_8000_seeker( "EOC_SCP_8000_SEEKER" );
+static const effect_on_condition_id eoc_scp_8000_push( "EOC_SCP_8000_PUSH" );
+
 // SCP-494: the gloves and the material trades they enable.
 static const itype_id itype_scp_494( "scp_494" );
 static const flag_id flag_SCP_494( "SCP_494" );
@@ -704,4 +717,63 @@ TEST_CASE( "scps_9044_reaches_the_end_once", "[scps]" )
     REQUIRE( eoc_scp_9044_step->activate( d ) );
     CHECK( you.get_value( "scp_9044_depth" ) == 23 );
     CHECK( gifts() == 1 );
+}
+
+// SCP-8000: the machine, the site it sits in, and the four things it found.  The console's EOC is
+// what makes the chain work, so the registration here is not decoration -- if the interface or the
+// stabiliser lose their examine_action, or a find fails to load, the site is a room with a box in
+// it and nothing else.
+TEST_CASE( "scps_8000_is_registered", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    CHECK( oter_scp_8000_site322.is_valid() );
+
+    REQUIRE( ter_scp_8000_seeker.is_valid() );
+    CHECK( furn_scp_8000_console.is_valid() );
+    CHECK( furn_scp_8000_stabiliser.is_valid() );
+
+    CHECK( eoc_scp_8000_seeker.is_valid() );
+    CHECK( eoc_scp_8000_push.is_valid() );
+    CHECK( itype_note_8000.is_valid() );
+
+    CHECK( mon_scp_01_seek.is_valid() );
+    CHECK( mon_scp_04_seek.is_valid() );
+    CHECK( mon_scp_13_seek.is_valid() );
+    CHECK( mon_scp_22_seek.is_valid() );
+}
+
+// The chain, driven for real.  The counter is what every step of the reveal reads, so it is the
+// thing worth asserting: one scan advances it by one, the stabiliser pages it ahead (or lets
+// something through instead), and past the last entry scanning again is what cracks the machine.
+// The reveals themselves point at real overmap specials, which a test world may not have placed --
+// that is why the assertion is on the counter and not on the located tile.
+TEST_CASE( "scps_8000_seeker_scans_the_chain", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    clear_avatar();
+    avatar &you = get_avatar();
+    dialogue d( get_talker_for( you ), nullptr );
+
+    REQUIRE( eoc_scp_8000_seeker->activate( d ) );
+    CHECK( you.get_value( "scp_8000_scan" ) == 1 );
+
+    REQUIRE( eoc_scp_8000_seeker->activate( d ) );
+    CHECK( you.get_value( "scp_8000_scan" ) == 2 );
+
+    // The stabiliser either pages ahead or leaks; over ten pulls it cannot plausibly do neither.
+    // diag_value compares for equality against a number and nothing else, so this asks "did it
+    // move" rather than "did it advance by at least one" -- over ten pulls that is the same claim.
+    for( int i = 0; i < 10; i++ ) {
+        eoc_scp_8000_push->activate( d );
+    }
+    CHECK_FALSE( you.get_value( "scp_8000_scan" ) == 2 );
+
+    // Past the last entry: the scan runs, the counter passes ten, and the bay is ruined underfoot.
+    you.set_value( "scp_8000_scan", 10 );
+    REQUIRE( eoc_scp_8000_seeker->activate( d ) );
+    CHECK( you.get_value( "scp_8000_scan" ) == 11 );
 }
