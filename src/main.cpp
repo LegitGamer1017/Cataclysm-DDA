@@ -1171,13 +1171,40 @@ void run_game_loop( cli_opts &cli )
             // turn loop, once per turn.  A calendar jump would not accrue anything (rates are per
             // turn), and an in-game wait key is no substitute -- too slow, and a script's keys get
             // eaten by the load.  This is what makes a per-hour mechanic assertable.
+            //
+            // BOUNDED BY THE QUEUE, NOT BY THE COUNT.  do_turn() blocks when nothing answers it, so
+            // if the keys were consumed elsewhere -- a modal on screen, usually -- advancing anyway
+            // would hang the process inside this hook, which is exactly what a save-continuation
+            // run did.  Stop when the queue is empty, and write how far it got so the caller can be
+            // told rather than left guessing.
+            const int turn_before = to_turn<int>( calendar::turn );
             inp_mngr.inject_input_events( std::vector<std::string>(
                                               static_cast<size_t>( cli.advance_turns ),
                                               cli.advance_key ) );
             for( int i = 0; i < cli.advance_turns; i++ ) {
+                if( inp_mngr.injected_input_remaining() <= 0 ) {
+                    break;      // nothing left to answer a turn with; blocking here would hang
+                }
                 if( g->do_turn() ) {
                     break;
                 }
+            }
+            try {
+                const cata_path adv_out =
+                    PATH_INFO::world_base_save_path() / "mcp_advance.result.json";
+                std::ofstream aout( adv_out.get_unrelative_path(), std::ios::trunc );
+                if( aout.is_open() ) {
+                    const int advanced = to_turn<int>( calendar::turn ) - turn_before;
+                    JsonOut ajout( aout );
+                    ajout.start_object();
+                    ajout.member( "requested", cli.advance_turns );
+                    ajout.member( "turns", advanced );
+                    ajout.member( "keys_left", inp_mngr.injected_input_remaining() );
+                    ajout.member( "stopped_early", advanced < cli.advance_turns );
+                    ajout.end_object();
+                }
+            } catch( const std::exception & ) {
+                // diagnostics are best effort
             }
         }
         if( cli.snapshot ) {
@@ -1264,13 +1291,40 @@ void run_game_loop( cli_opts &cli )
             // turn loop, once per turn.  A calendar jump would not accrue anything (rates are per
             // turn), and an in-game wait key is no substitute -- too slow, and a script's keys get
             // eaten by the load.  This is what makes a per-hour mechanic assertable.
+            //
+            // BOUNDED BY THE QUEUE, NOT BY THE COUNT.  do_turn() blocks when nothing answers it, so
+            // if the keys were consumed elsewhere -- a modal on screen, usually -- advancing anyway
+            // would hang the process inside this hook, which is exactly what a save-continuation
+            // run did.  Stop when the queue is empty, and write how far it got so the caller can be
+            // told rather than left guessing.
+            const int turn_before = to_turn<int>( calendar::turn );
             inp_mngr.inject_input_events( std::vector<std::string>(
                                               static_cast<size_t>( cli.advance_turns ),
                                               cli.advance_key ) );
             for( int i = 0; i < cli.advance_turns; i++ ) {
+                if( inp_mngr.injected_input_remaining() <= 0 ) {
+                    break;      // nothing left to answer a turn with; blocking here would hang
+                }
                 if( g->do_turn() ) {
                     break;
                 }
+            }
+            try {
+                const cata_path adv_out =
+                    PATH_INFO::world_base_save_path() / "mcp_advance.result.json";
+                std::ofstream aout( adv_out.get_unrelative_path(), std::ios::trunc );
+                if( aout.is_open() ) {
+                    const int advanced = to_turn<int>( calendar::turn ) - turn_before;
+                    JsonOut ajout( aout );
+                    ajout.start_object();
+                    ajout.member( "requested", cli.advance_turns );
+                    ajout.member( "turns", advanced );
+                    ajout.member( "keys_left", inp_mngr.injected_input_remaining() );
+                    ajout.member( "stopped_early", advanced < cli.advance_turns );
+                    ajout.end_object();
+                }
+            } catch( const std::exception & ) {
+                // diagnostics are best effort
             }
         }
         if( cli.snapshot ) {
