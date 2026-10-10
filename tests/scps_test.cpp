@@ -79,6 +79,18 @@ static const itype_id itype_scp_494_wooden_syringe( "scp_494_wooden_syringe" );
 static const itype_id itype_scp_494_wooden_magnifier( "scp_494_wooden_magnifier" );
 static const itype_id itype_scp_494_cotton_bowl( "scp_494_cotton_bowl" );
 static const itype_id itype_scp_494_wooden_canteen( "scp_494_wooden_canteen" );
+static const itype_id itype_scp_494_wooden_rope( "scp_494_wooden_rope" );
+static const itype_id itype_scp_494_wooden_scissors( "scp_494_wooden_scissors" );
+static const itype_id itype_scp_494_wooden_golf_ball( "scp_494_wooden_golf_ball" );
+static const itype_id itype_scp_494_steel_rope( "scp_494_steel_rope" );
+static const itype_id itype_scp_494_steel_bowl( "scp_494_steel_bowl" );
+static const itype_id itype_scp_494_cloth_wrench( "scp_494_cloth_wrench" );
+static const itype_id itype_scp_494_cloth_scissors( "scp_494_cloth_scissors" );
+static const itype_id itype_scp_494_diamond_knife( "scp_494_diamond_knife" );
+static const itype_id itype_scp_494_gold_bowl( "scp_494_gold_bowl" );
+static const itype_id itype_scp_494_copper_rat( "scp_494_copper_rat" );
+static const itype_id itype_scp_494_furry_disk( "scp_494_furry_disk" );
+static const itype_id itype_scp_494_lab_rat( "scp_494_lab_rat" );
 static const effect_on_condition_id eoc_scp_494_use( "EOC_SCP_494_USE" );
 
 // Every case is a no-op on a checkout that does not have `scps` loaded, so the
@@ -209,5 +221,17 @@ TEST_CASE( "scps_494_gloves_and_trades_are_registered", "[scps]" )
     CHECK( itype_scp_494_wooden_magnifier.is_valid() );
     CHECK( itype_scp_494_cotton_bowl.is_valid() );
     CHECK( itype_scp_494_wooden_canteen.is_valid() );
+    CHECK( itype_scp_494_wooden_rope.is_valid() );
+    CHECK( itype_scp_494_wooden_scissors.is_valid() );
+    CHECK( itype_scp_494_wooden_golf_ball.is_valid() );
+    CHECK( itype_scp_494_steel_rope.is_valid() );
+    CHECK( itype_scp_494_steel_bowl.is_valid() );
+    CHECK( itype_scp_494_cloth_wrench.is_valid() );
+    CHECK( itype_scp_494_cloth_scissors.is_valid() );
+    CHECK( itype_scp_494_diamond_knife.is_valid() );
+    CHECK( itype_scp_494_gold_bowl.is_valid() );
+    CHECK( itype_scp_494_copper_rat.is_valid() );
+    CHECK( itype_scp_494_furry_disk.is_valid() );
+    CHECK( itype_scp_494_lab_rat.is_valid() );
     CHECK( eoc_scp_494_use.is_valid() );
 }
