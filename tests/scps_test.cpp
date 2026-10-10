@@ -71,6 +71,14 @@ static const itype_id itype_scp_494_stone_flashlight( "scp_494_stone_flashlight"
 static const itype_id itype_scp_494_bone_knife( "scp_494_bone_knife" );
 static const itype_id itype_scp_494_glass_bottle( "scp_494_glass_bottle" );
 static const itype_id itype_scp_494_diamond_spoon( "scp_494_diamond_spoon" );
+static const itype_id itype_scp_494_copper_hammer( "scp_494_copper_hammer" );
+static const itype_id itype_scp_494_copper_screwdriver( "scp_494_copper_screwdriver" );
+static const itype_id itype_scp_494_copper_bowl( "scp_494_copper_bowl" );
+static const itype_id itype_scp_494_wooden_spoon( "scp_494_wooden_spoon" );
+static const itype_id itype_scp_494_wooden_syringe( "scp_494_wooden_syringe" );
+static const itype_id itype_scp_494_wooden_magnifier( "scp_494_wooden_magnifier" );
+static const itype_id itype_scp_494_cotton_bowl( "scp_494_cotton_bowl" );
+static const itype_id itype_scp_494_wooden_canteen( "scp_494_wooden_canteen" );
 static const effect_on_condition_id eoc_scp_494_use( "EOC_SCP_494_USE" );
 
 // Every case is a no-op on a checkout that does not have `scps` loaded, so the
@@ -193,5 +201,13 @@ TEST_CASE( "scps_494_gloves_and_trades_are_registered", "[scps]" )
     CHECK( itype_scp_494_bone_knife.is_valid() );
     CHECK( itype_scp_494_glass_bottle.is_valid() );
     CHECK( itype_scp_494_diamond_spoon.is_valid() );
+    CHECK( itype_scp_494_copper_hammer.is_valid() );
+    CHECK( itype_scp_494_copper_screwdriver.is_valid() );
+    CHECK( itype_scp_494_copper_bowl.is_valid() );
+    CHECK( itype_scp_494_wooden_spoon.is_valid() );
+    CHECK( itype_scp_494_wooden_syringe.is_valid() );
+    CHECK( itype_scp_494_wooden_magnifier.is_valid() );
+    CHECK( itype_scp_494_cotton_bowl.is_valid() );
+    CHECK( itype_scp_494_wooden_canteen.is_valid() );
     CHECK( eoc_scp_494_use.is_valid() );
 }
