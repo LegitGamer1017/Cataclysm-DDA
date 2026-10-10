@@ -57,6 +57,23 @@ static const npc_class_id npc_class_scp_foundation_sentry( "NC_SCP_FOUNDATION_SE
 static const mission_type_id mission_scp_foundation_log( "MISSION_SCP_FOUNDATION_LOG" );
 static const effect_on_condition_id eoc_scp_foundation_log_recovered( "EOC_SCP_FOUNDATION_LOG_RECOVERED" );
 
+// SCP-1884: the blind fortune-teller, the mass of hands that is her eyes, and the book she asks for.
+static const npc_class_id npc_class_scp_1884_a( "NC_SCP_1884_A" );
+static const faction_id faction_scp_1884_custody( "scp_1884_custody" );
+static const trait_id trait_scp_1884_blind( "SCP_1884_BLIND" );
+static const trait_id trait_scp_1884_no_hands( "SCP_1884_NO_HANDS" );
+static const trait_id trait_scp_1884_taken_hand_r( "SCP_1884_TAKEN_HAND_R" );
+static const trait_id trait_scp_1884_taken_hand_l( "SCP_1884_TAKEN_HAND_L" );
+static const mtype_id mon_scp_1884_b( "mon_scp_1884_b" );
+static const efftype_id effect_scp_1884_shared_pain( "effect_scp_1884_shared_pain" );
+static const mission_type_id mission_scp_1884_books( "MISSION_SCP_1884_BOOKS" );
+static const itype_id itype_scp_1884_shed_skin( "scp_1884_shed_skin" );
+static const itype_id itype_note_1884( "scp_foundation_note_1884" );
+static const itype_id itype_classic_literature( "classic_literature" );
+static const oter_str_id oter_scp_1884_site59( "scp_1884_site59" );
+static const effect_on_condition_id eoc_scp_1884_takes_a_hand( "EOC_SCP_1884_TAKES_A_HAND" );
+static const effect_on_condition_id eoc_scp_1884_books_recovered( "EOC_SCP_1884_BOOKS_RECOVERED" );
+
 // SCP-494: the gloves and the material trades they enable.
 static const itype_id itype_scp_494( "scp_494" );
 static const flag_id flag_SCP_494( "SCP_494" );
@@ -466,4 +483,34 @@ TEST_CASE( "scps_287_scales_phantoms_with_charge", "[scps]" )
     dialogue spent( get_talker_for( u ), get_talker_for( dead_loc ) );
     eoc_scp_287_activate->activate( spent );
     CHECK( phantoms() == after_full );
+}
+
+// SCP-1884: the blind fortune-teller, the mass of hands that is her eyes, and the book they ask
+// for.  She is an NPC that the world cannot make (a blind mutation on an npc_class), he is a
+// monster the player can hold a conversation with, and the quest is for a book the game already
+// carries in two of its variants -- so the whole anomaly hangs off ids that must exist.
+TEST_CASE( "scps_1884_is_registered", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    REQUIRE( mon_scp_1884_b.is_valid() );
+
+    CHECK( trait_scp_1884_blind.is_valid() );
+    CHECK( trait_scp_1884_no_hands.is_valid() );
+    CHECK( trait_scp_1884_taken_hand_r.is_valid() );
+    CHECK( trait_scp_1884_taken_hand_l.is_valid() );
+
+    CHECK( effect_scp_1884_shared_pain.is_valid() );
+    CHECK( eoc_scp_1884_takes_a_hand.is_valid() );
+    CHECK( eoc_scp_1884_books_recovered.is_valid() );
+
+    CHECK( npc_class_scp_1884_a.is_valid() );
+    CHECK( faction_scp_1884_custody.is_valid() );
+    CHECK( oter_scp_1884_site59.is_valid() );
+    CHECK( itype_scp_1884_shed_skin.is_valid() );
+    CHECK( itype_note_1884.is_valid() );
+
+    CHECK( mission_scp_1884_books.is_valid() );
+    CHECK( itype_classic_literature.is_valid() );
 }
