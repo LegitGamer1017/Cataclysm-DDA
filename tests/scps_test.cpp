@@ -816,12 +816,49 @@ TEST_CASE( "scps_8000_wallace_is_registered", "[scps]" )
     CHECK( eoc_scp_8000_book_saves_you.is_valid() );
 }
 
+// The one behaviour the plan flagged as possibly untestable, and it turns out to be testable:
+// the engine's prevent-death pass is a public entry point, so a test can kill the vitals, run it,
+// and see whether the book paid.  That is exactly what the EOC is for -- it fires from
+// is_game_over, mid-turn, with the vitals already at zero, and cancelling the death is the whole
+// of its job.  The avatar is put back on its feet at the end so the case cannot poison the ones
+// that follow it.
+TEST_CASE( "scps_8000_book_pays_for_one_death", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    clear_avatar();
+    avatar &you = get_avatar();
+    const bodypart_id torso( "torso" );
+
+    // Without the book, the death simply stands.
+    you.set_part_hp_cur( torso, 0 );
+    REQUIRE( you.is_dead_state() );
+    effect_on_conditions::prevent_death();
+    CHECK( you.is_dead_state() );
+
+    // With it, the book pays.
+    you.set_part_hp_cur( torso, 40 );
+    you.i_add( item( itype_unwritten_book ) );
+    you.set_part_hp_cur( torso, 0 );
+    REQUIRE( you.is_dead_state() );
+    effect_on_conditions::prevent_death();
+    CHECK_FALSE( you.is_dead_state() );
+    CHECK( you.has_trait( trait_second_chance_spent ) );
+
+    // ...and having paid once, it will not pay again.
+    you.set_part_hp_cur( torso, 0 );
+    REQUIRE( you.is_dead_state() );
+    effect_on_conditions::prevent_death();
+    CHECK( you.is_dead_state() );
+
+    you.set_part_hp_cur( torso, 40 );
+    CHECK_FALSE( you.is_dead_state() );
+}
+
 // The book is a carried item plus a PREVENT_DEATH EOC, and the limiter trait is what makes it a
-// once.  Driving the death itself headlessly is the one thing this suite cannot do honestly -- the
-// engine runs those EOCs from is_game_over, mid-turn, and simulating that faithfully is a
-// different kind of test.  What can be proven is the wiring: the book exists, carrying it is what
-// the EOC's condition reads, and the limiter it sets is a real trait that the avatar does not
-// start with.
+// once.  This case proves the wiring the EOC's condition reads: the book exists, carrying it is
+// what the condition checks, and the limiter is a real trait the avatar does not start with.
 TEST_CASE( "scps_8000_book_is_a_carried_lifeline", "[scps]" )
 {
     if( !scps_loaded() ) {
