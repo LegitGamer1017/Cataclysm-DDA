@@ -133,6 +133,15 @@ static const effect_on_condition_id eoc_scp_3254_birthday( "EOC_SCP_3254_BIRTHDA
 static const itype_id itype_scp_3254_grail_letter( "scp_3254_grail_letter" );
 static const itype_id itype_scp_3254_grail_tools( "scp_3254_grail_tools" );
 
+// SCP-287: the Meteor Lord's sword, its ghosts, and the two sites.
+static const itype_id itype_scp_287( "scp_287" );
+static const itype_id itype_scp_287_journal( "scp_287_journal" );
+static const flag_id flag_SCP_287( "SCP_287" );
+static const mtype_id mon_scp_287_ghost( "mon_scp_287_ghost" );
+static const efftype_id effect_scp_287_headache( "effect_scp_287_headache" );
+static const spell_id spell_scp_287_rout( "spell_scp_287_rout" );
+static const effect_on_condition_id eoc_scp_287_activate( "EOC_SCP_287_ACTIVATE" );
+
 // Every case is a no-op on a checkout that does not have `scps` loaded, so the
 // suite can live in the shared test binary without disturbing other runs
 // (the same guard style the other SCP cases use).
@@ -371,4 +380,21 @@ TEST_CASE( "scps_3254_is_registered", "[scps]" )
     CHECK( itype_scp_3254_grail_tools.is_valid() );
     CHECK( item_group::group_contains_item( item_group_id( "scp_grail_zoo_loot" ),
                                             itype_scp_3254_grail_tools ) );
+}
+
+// SCP-287: the powered Viking sword, the phantom it spawns, the headache it leaves, the rout it
+// casts, and its activation EOC must all register, and the barrow must carry the sword.
+TEST_CASE( "scps_287_is_registered", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    REQUIRE( itype_scp_287.is_valid() );
+    CHECK( itype_scp_287->has_flag( flag_SCP_287 ) );
+    CHECK( itype_scp_287_journal.is_valid() );
+    CHECK( mon_scp_287_ghost.is_valid() );
+    CHECK( effect_scp_287_headache.is_valid() );
+    CHECK( spell_scp_287_rout.is_valid() );
+    CHECK( eoc_scp_287_activate.is_valid() );
+    CHECK( item_group::group_contains_item( item_group_id( "scp_287_mound_loot" ), itype_scp_287 ) );
 }
