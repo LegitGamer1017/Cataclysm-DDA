@@ -130,6 +130,8 @@ static const itype_id itype_scp_foundation_note_3254( "scp_foundation_note_3254"
 static const itype_id itype_teddy_bear( "teddy_bear" );
 static const spell_id spell_scp_3254_mend( "scp_3254_mend" );
 static const effect_on_condition_id eoc_scp_3254_birthday( "EOC_SCP_3254_BIRTHDAY" );
+static const itype_id itype_scp_3254_grail_letter( "scp_3254_grail_letter" );
+static const itype_id itype_scp_3254_grail_tools( "scp_3254_grail_tools" );
 
 // Every case is a no-op on a checkout that does not have `scps` loaded, so the
 // suite can live in the shared test binary without disturbing other runs
@@ -364,4 +366,9 @@ TEST_CASE( "scps_3254_is_registered", "[scps]" )
     CHECK( eoc_scp_3254_birthday.is_valid() );
     CHECK( item_group::group_contains_item( item_group_id( "scp_3254_enclosure_loot" ),
                                             itype_teddy_bear ) );
+    // The Grail thread: Katherine's letter and her tools, at her zoo.
+    CHECK( itype_scp_3254_grail_letter.is_valid() );
+    CHECK( itype_scp_3254_grail_tools.is_valid() );
+    CHECK( item_group::group_contains_item( item_group_id( "scp_grail_zoo_loot" ),
+                                            itype_scp_3254_grail_tools ) );
 }
