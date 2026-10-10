@@ -872,3 +872,34 @@ TEST_CASE( "scps_8000_book_is_a_carried_lifeline", "[scps]" )
     you.i_add( item( itype_unwritten_book ) );
     CHECK( you.amount_of( itype_unwritten_book ) == 1 );
 }
+
+// Stage 2's load-bearing mechanic, and the one the audit marks not-assertable: the rift actually
+// changes dimensions.  u_travel_to_dimension is the only way into Memory Lane, so if it does not
+// fire the library is somewhere that cannot be reached -- and no other case here would notice,
+// because every other Stage 2 case checks content rather than travel.  The avatar is left back in
+// the main world, so the case cannot poison the ones after it.
+TEST_CASE( "scps_8000_rift_actually_travels", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    clear_avatar();
+    // The SCP-1499 cases run before this one and leave the player in their dimension, so the
+    // starting layer has to be asserted rather than assumed -- the same trap the 9044 case hit.
+    if( g->get_dimension_prefix() != dimension_id( "default" ) ) {
+        g->travel_to_dimension( dimension_id( "default" ), {}, {}, std::nullopt );
+    }
+    avatar &you = get_avatar();
+    dialogue d( get_talker_for( you ), nullptr );
+
+    const dimension_id home( g->get_dimension_prefix() );
+    CHECK( home == dimension_id( "default" ) );
+
+    // In through the tear.
+    REQUIRE( eoc_scp_8000_rift->activate( d ) );
+    CHECK( g->get_dimension_prefix() == dimension_id( "scp_8000_library" ) );
+
+    // And back out the far side of it.
+    REQUIRE( eoc_scp_8000_rift_home->activate( d ) );
+    CHECK( g->get_dimension_prefix() == home );
+}
