@@ -61,6 +61,16 @@ static const itype_id itype_scp_494_plastic_diamond( "scp_494_plastic_diamond" )
 static const itype_id itype_scp_494_diamond_sphere( "scp_494_diamond_sphere" );
 static const itype_id itype_scp_494_steel_keypad_box( "scp_494_steel_keypad_box" );
 static const itype_id itype_scp_494_micro_phone( "scp_494_micro_phone" );
+static const itype_id itype_scp_494_gold_wristwatch( "scp_494_gold_wristwatch" );
+static const itype_id itype_scp_494_gold_spoon( "scp_494_gold_spoon" );
+static const itype_id itype_scp_494_gold_radio( "scp_494_gold_radio" );
+static const itype_id itype_scp_494_silver_scissors( "scp_494_silver_scissors" );
+static const itype_id itype_scp_494_silver_wrench( "scp_494_silver_wrench" );
+static const itype_id itype_scp_494_lead_canteen( "scp_494_lead_canteen" );
+static const itype_id itype_scp_494_stone_flashlight( "scp_494_stone_flashlight" );
+static const itype_id itype_scp_494_bone_knife( "scp_494_bone_knife" );
+static const itype_id itype_scp_494_glass_bottle( "scp_494_glass_bottle" );
+static const itype_id itype_scp_494_diamond_spoon( "scp_494_diamond_spoon" );
 static const effect_on_condition_id eoc_scp_494_use( "EOC_SCP_494_USE" );
 
 // Every case is a no-op on a checkout that does not have `scps` loaded, so the
@@ -173,5 +183,15 @@ TEST_CASE( "scps_494_gloves_and_trades_are_registered", "[scps]" )
     CHECK( itype_scp_494_diamond_sphere.is_valid() );
     CHECK( itype_scp_494_steel_keypad_box.is_valid() );
     CHECK( itype_scp_494_micro_phone.is_valid() );
+    CHECK( itype_scp_494_gold_wristwatch.is_valid() );
+    CHECK( itype_scp_494_gold_spoon.is_valid() );
+    CHECK( itype_scp_494_gold_radio.is_valid() );
+    CHECK( itype_scp_494_silver_scissors.is_valid() );
+    CHECK( itype_scp_494_silver_wrench.is_valid() );
+    CHECK( itype_scp_494_lead_canteen.is_valid() );
+    CHECK( itype_scp_494_stone_flashlight.is_valid() );
+    CHECK( itype_scp_494_bone_knife.is_valid() );
+    CHECK( itype_scp_494_glass_bottle.is_valid() );
+    CHECK( itype_scp_494_diamond_spoon.is_valid() );
     CHECK( eoc_scp_494_use.is_valid() );
 }
