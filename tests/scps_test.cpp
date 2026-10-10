@@ -111,6 +111,15 @@ static const itype_id itype_scp_745_head( "scp_745_head" );
 static const flag_id flag_SCP_745( "SCP_745" );
 static const mongroup_id GROUP_SCP_745( "GROUP_SCP_745" );
 
+// SCP-4059: the Chemosh rite and its site predators.
+static const mtype_id mon_scp_4059_2( "mon_scp_4059_2" );
+static const itype_id itype_scp_4059_journal( "scp_4059_journal" );
+static const itype_id itype_scp_4059_death_cap( "scp_4059_death_cap" );
+static const itype_id itype_scp_4059_horn( "scp_4059_horn" );
+static const flag_id flag_SCP_4059( "SCP_4059" );
+static const effect_on_condition_id eoc_scp_4059_read( "EOC_SCP_4059_READ" );
+static const effect_on_condition_id eoc_scp_4059_chemosh( "EOC_SCP_4059_CHEMOSH" );
+
 // Every case is a no-op on a checkout that does not have `scps` loaded, so the
 // suite can live in the shared test binary without disturbing other runs
 // (the same guard style the other SCP cases use).
@@ -306,4 +315,20 @@ TEST_CASE( "scps_745_is_registered", "[scps]" )
     CHECK( itype_scp_745_head.is_valid() );
     CHECK( itype_scp_745_head->has_flag( flag_SCP_745 ) );
     CHECK( GROUP_SCP_745.is_valid() );
+}
+
+// SCP-4059: the hircine predator, the journal, the death caps, the horn, the Chemosh rite, and its
+// EOCs must all register when the mod is loaded.
+TEST_CASE( "scps_4059_is_registered", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    REQUIRE( mon_scp_4059_2.is_valid() );
+    CHECK( itype_scp_4059_journal.is_valid() );
+    CHECK( itype_scp_4059_journal->has_flag( flag_SCP_4059 ) );
+    CHECK( itype_scp_4059_death_cap.is_valid() );
+    CHECK( itype_scp_4059_horn.is_valid() );
+    CHECK( eoc_scp_4059_read.is_valid() );
+    CHECK( eoc_scp_4059_chemosh.is_valid() );
 }
