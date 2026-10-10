@@ -644,3 +644,64 @@ TEST_CASE( "scps_9044_has_a_way_out", "[scps]" )
         CHECK( tm.ter( tripoint_omt_ms{ 11, y, 0 } ) != ter_id( "t_wall_wood" ) );
     }
 }
+
+// The end of the walk, which nothing else exercises: the touch at nineteen, the gift at
+// twenty-two, and -- the reason this needs its own case -- that twenty-two is the *last* lap that
+// pays.  The counter keeps climbing, and at twenty-three the door still does not open and the
+// house says nothing at all.  Before this, the reward was the only part of the SCP that no test
+// had ever produced.
+TEST_CASE( "scps_9044_reaches_the_end_once", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    clear_avatar();
+    clear_map_without_vision();
+    map &here = get_map();
+    avatar &you = get_avatar();
+
+    const tripoint_bub_ms hall_start( 20, 20, 0 );
+    const tripoint_bub_ms far_door( 20, 8, 0 );
+    here.ter_set( hall_start, ter_id( "t_scp_9044_hall_start" ) );
+    here.ter_set( far_door, ter_id( "t_scp_9044_door" ) );
+
+    dialogue d( get_talker_for( you ), nullptr );
+
+    // u_spawn_item drops the item at your feet rather than into your pack -- verified here the
+    // first time this case ran, when an inventory-only count read 0 for the keepsake.  Count both
+    // places, so the assertion is about the thing existing and not about where it landed.
+    const auto count_of = [&]( const itype_id &what ) {
+        int n = you.amount_of( what );
+        for( const item &it : here.i_at( you.pos_bub() ) ) {
+            if( it.typeId() == what ) {
+                n++;
+            }
+        }
+        return n;
+    };
+    const auto gifts = [&]() {
+        return count_of( itype_scp_9044_gift );
+    };
+
+    // Nineteen: "Feel my fingers."  Something takes hold of your arm and does not let go.
+    you.set_value( "scp_9044_depth", 18 );
+    you.setpos( here, far_door );
+    REQUIRE( eoc_scp_9044_step->activate( d ) );
+    CHECK( you.get_value( "scp_9044_depth" ) == 19 );
+    CHECK( you.has_effect( effect_scp_9044_touched ) );
+    CHECK( count_of( itype_id( "ring_silver" ) ) >= 1 );
+
+    // Twenty-two: "Welcome home."  The gift, on the lap it belongs to.
+    you.set_value( "scp_9044_depth", 21 );
+    you.setpos( here, far_door );
+    REQUIRE( eoc_scp_9044_step->activate( d ) );
+    CHECK( you.get_value( "scp_9044_depth" ) == 22 );
+    CHECK( gifts() == 1 );
+
+    // Twenty-three: the door does not open, and this time the house says nothing at all.  Walking
+    // on must not pay again -- the gift is for reaching the end, not for pacing it.
+    you.setpos( here, far_door );
+    REQUIRE( eoc_scp_9044_step->activate( d ) );
+    CHECK( you.get_value( "scp_9044_depth" ) == 23 );
+    CHECK( gifts() == 1 );
+}
