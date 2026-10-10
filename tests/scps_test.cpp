@@ -122,6 +122,15 @@ static const effect_on_condition_id eoc_scp_4059_chemosh( "EOC_SCP_4059_CHEMOSH"
 static const itype_id itype_scp_4059_fleshweaver_blade( "scp_4059_fleshweaver_blade" );
 static const efftype_id effect_scp_4059_karcist( "effect_scp_4059_karcist" );
 
+// SCP-3254: the cybernetic bear and her plush children.
+static const mtype_id mon_scp_3254( "mon_scp_3254" );
+static const mtype_id mon_scp_3254_1( "mon_scp_3254_1" );
+static const mtype_id mon_scp_3254_1_adult( "mon_scp_3254_1_adult" );
+static const itype_id itype_scp_foundation_note_3254( "scp_foundation_note_3254" );
+static const itype_id itype_teddy_bear( "teddy_bear" );
+static const spell_id spell_scp_3254_mend( "scp_3254_mend" );
+static const effect_on_condition_id eoc_scp_3254_birthday( "EOC_SCP_3254_BIRTHDAY" );
+
 // Every case is a no-op on a checkout that does not have `scps` loaded, so the
 // suite can live in the shared test binary without disturbing other runs
 // (the same guard style the other SCP cases use).
@@ -338,4 +347,21 @@ TEST_CASE( "scps_4059_is_registered", "[scps]" )
     CHECK( effect_scp_4059_karcist.is_valid() );
     CHECK( item_group::group_contains_item( item_group_id( "scp_4059_foundation_cache" ),
                                             itype_scp_4059_fleshweaver_blade ) );
+}
+
+// SCP-3254: the docile cybernetic bear, her juvenile that grows up, the containment file, and the
+// healing aura she casts on her brood must all register.
+TEST_CASE( "scps_3254_is_registered", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    REQUIRE( mon_scp_3254.is_valid() );
+    CHECK( mon_scp_3254_1.is_valid() );
+    CHECK( mon_scp_3254_1_adult.is_valid() );
+    CHECK( itype_scp_foundation_note_3254.is_valid() );
+    CHECK( spell_scp_3254_mend.is_valid() );
+    CHECK( eoc_scp_3254_birthday.is_valid() );
+    CHECK( item_group::group_contains_item( item_group_id( "scp_3254_enclosure_loot" ),
+                                            itype_teddy_bear ) );
 }
