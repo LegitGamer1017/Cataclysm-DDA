@@ -119,6 +119,8 @@ static const itype_id itype_scp_4059_horn( "scp_4059_horn" );
 static const flag_id flag_SCP_4059( "SCP_4059" );
 static const effect_on_condition_id eoc_scp_4059_read( "EOC_SCP_4059_READ" );
 static const effect_on_condition_id eoc_scp_4059_chemosh( "EOC_SCP_4059_CHEMOSH" );
+static const itype_id itype_scp_4059_fleshweaver_blade( "scp_4059_fleshweaver_blade" );
+static const efftype_id effect_scp_4059_karcist( "effect_scp_4059_karcist" );
 
 // Every case is a no-op on a checkout that does not have `scps` loaded, so the
 // suite can live in the shared test binary without disturbing other runs
@@ -331,4 +333,9 @@ TEST_CASE( "scps_4059_is_registered", "[scps]" )
     CHECK( itype_scp_4059_horn.is_valid() );
     CHECK( eoc_scp_4059_read.is_valid() );
     CHECK( eoc_scp_4059_chemosh.is_valid() );
+    CHECK( itype_scp_4059_fleshweaver_blade.is_valid() );
+    CHECK( itype_scp_4059_fleshweaver_blade->has_flag( flag_SCP_4059 ) );
+    CHECK( effect_scp_4059_karcist.is_valid() );
+    CHECK( item_group::group_contains_item( item_group_id( "scp_4059_foundation_cache" ),
+                                            itype_scp_4059_fleshweaver_blade ) );
 }
