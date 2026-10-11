@@ -28,6 +28,18 @@
 #include "talker.h"
 #include "type_id.h"
 
+// ---------------------------------------------------------------------------------------------
+// This file tests the `scps` mod.  `data/mods/cdda-scps` is gitignored in the game repo, so a
+// checkout of the engine alone compiles these cases in and they are inert.
+//
+// DECISION (recorded at the harness's request, 2026-10-11): the absence is made LOUD.
+// Every case below early-returns when the mod is not loaded, so without it the suite reads
+// "37 cases, 0 assertions, all passed" -- a green tick that proves nothing.  `scps_mod_is_loaded`
+// is the tripwire: it is deliberately unguarded and FAILS on any run that does not have `scps`,
+// so a hollow green cannot be read as a pass.  If you are seeing that failure, either clone the mod
+// or deselect the [scps] tag; do not read the run as coverage.
+// ---------------------------------------------------------------------------------------------
+
 // Content ids introduced by the `scps` mod (SCP-173 / SCP-1499 / SCP-1162).
 static const species_id species_SCP( "SCP" );
 
@@ -109,7 +121,8 @@ static const effect_on_condition_id eoc_scp_8000_push( "EOC_SCP_8000_PUSH" );
 
 // SCP-8000, Stage 2: the rift, Memory Lane, Wallace, and the unwritten book.
 static const oter_str_id oter_scp_8000_library( "scp_8000_library" );
-static const oter_str_id oter_scp_8000_reading_room( "scp_8000_reading_room" );
+// (oter_scp_8000_reading_room removed here: the special it named was deleted and no such OMT exists,
+// so the declaration was a stale id check that could never have been reached.)
 static const ter_str_id ter_scp_8000_rift( "t_scp_8000_rift" );
 static const ter_str_id ter_scp_8000_rift_home( "t_scp_8000_rift_home" );
 static const ter_str_id ter_scp_8000_library_floor( "t_scp_8000_library_floor" );
@@ -244,6 +257,15 @@ static const effect_on_condition_id eoc_scp_287_activate( "EOC_SCP_287_ACTIVATE"
 static bool scps_loaded()
 {
     return itype_scp_1499.is_valid();
+}
+
+// The tripwire described in the file header.  Unguarded on purpose: this is the one case that must
+// NOT early-return, so that a checkout without the mod reports a failure instead of a hollow pass
+// with zero assertions in 37 cases.
+TEST_CASE( "scps_mod_is_loaded", "[scps]" )
+{
+    REQUIRE( scps_loaded() );
+    CHECK( itype_scp_1499.is_valid() );
 }
 
 TEST_CASE( "scps_content_is_registered", "[scps]" )
@@ -570,6 +592,95 @@ TEST_CASE( "scps_287_scales_phantoms_with_charge", "[scps]" )
 // for.  She is an NPC that the world cannot make (a blind mutation on an npc_class), he is a
 // monster the player can hold a conversation with, and the quest is for a book the game already
 // carries in two of its variants -- so the whole anomaly hangs off ids that must exist.
+// SCP-1162's one mechanic, and the case that would have caught both of its critical bugs at once.
+// The cost used to be free for a stack larger than the request -- u_consume_item_sum has an upstream
+// branch that subtracts zero in exactly that case, and paper is charge-counted -- and it could be
+// gathered off the floor or out of a vehicle rather than out of the pack.
+TEST_CASE( "scps_1162_reaching_in_costs_an_item", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    const itype_id paper( "paper" );
+    const itype_id watch( "wristwatch" );
+    const effect_on_condition_id take( "EOC_SCP_1162_TAKE" );
+    REQUIRE( take.is_valid() );
+
+    // A five-charge paper stack, which is precisely the case that used to cost nothing.
+    clear_avatar();
+    avatar &you = get_avatar();
+    for( int i = 0; i < 5; i++ ) {
+        you.i_add( item( paper ) );
+    }
+    REQUIRE( you.charges_of( paper ) == 5 );
+    dialogue d( get_talker_for( you ), nullptr );
+    take->activate( d );
+    CHECK( you.charges_of( paper ) == 4 );
+
+    // And an unstackable item, so the chain's other branch is exercised too.
+    clear_avatar();
+    avatar &you2 = get_avatar();
+    you2.i_add( item( watch ) );
+    REQUIRE( you2.amount_of( watch ) == 1 );
+    dialogue d2( get_talker_for( you2 ), nullptr );
+    take->activate( d2 );
+    CHECK( you2.amount_of( watch ) == 0 );
+}
+
+// SCP-4059's ritual IS the SCP: the journal teaches it, and the rite needs the reservoir, at night,
+// under a full moon.  Neither half had a case, which is how a 48-tile-wide "at the reservoir" gate and
+// a purely decorative night gate both shipped.  The mapgen half is the §7 trap made a regression test:
+// a furniture-only palette char inherits the PREDECESSOR floor unless it maps its own terrain.
+TEST_CASE( "scps_4059_the_rite_is_learned_and_gated", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    const recipe_id chemosh_id( "recipe_scp_4059_chemosh" );
+    const effect_on_condition_id read_eoc( "EOC_SCP_4059_READ" );
+    const effect_on_condition_id rite_eoc( "EOC_SCP_4059_CHEMOSH" );
+    REQUIRE( chemosh_id.is_valid() );
+    const recipe *chemosh = &chemosh_id.obj();
+
+    clear_avatar();
+    avatar &you = get_avatar();
+    dialogue d( get_talker_for( you ), nullptr );
+
+    // Reading the journal is what teaches the rite.
+    CHECK_FALSE( you.knows_recipe( chemosh ) );
+    read_eoc->activate( d );
+    CHECK( you.knows_recipe( chemosh ) );
+
+    // And the rite cannot be performed away from the reservoir: activate() on an ACTIVATION EOC
+    // returns its condition, so this is the gate itself being asserted.
+    CHECK_FALSE( rite_eoc->activate( d ) );
+
+    // The clearing's own tiles: even-aligned, because a tinymap's origin is the even corner.
+    tripoint_abs_omt base = get_avatar().pos_abs_omt() + point( 40, 40 );
+    base.x() -= base.x() % 2;
+    base.y() -= base.y() % 2;
+
+    const auto generate = []( const tripoint_abs_omt & where, const std::string & omt,
+    tinymap & tm ) {
+        overmap_buffer.ter_set( where, oter_id( omt ) );
+        tm.load( where, true );
+        mapgendata md( where, *tm.cast_to_map(), 0.0f, calendar::turn, nullptr );
+        run_mapgen_func( omt, md );
+    };
+
+    // The cabin crates stand on the cabin's own boards, not on the predecessor forest floor.
+    tinymap ne;
+    generate( base + point::east, "scp_4059_clearing_ne", ne );
+    CHECK( ne.furn( tripoint_omt_ms{ 13, 7, 0 } ) == furn_id( "f_crate_c" ) );
+    CHECK( ne.ter( tripoint_omt_ms{ 13, 7, 0 } ) == ter_id( "t_dirtfloor" ) );
+
+    // And the grave crosses stand in the grave.
+    tinymap nw;
+    generate( base, "scp_4059_clearing_nw", nw );
+    CHECK( nw.furn( tripoint_omt_ms{ 5, 20, 0 } ) == furn_id( "f_battlefield_cross" ) );
+    CHECK( nw.ter( tripoint_omt_ms{ 5, 20, 0 } ) == ter_id( "t_pit_corpsed" ) );
+}
+
 TEST_CASE( "scps_1884_is_registered", "[scps]" )
 {
     if( !scps_loaded() ) {
@@ -694,6 +805,10 @@ TEST_CASE( "scps_9044_has_a_way_out", "[scps]" )
     tripoint_abs_omt where = get_avatar().pos_abs_omt() + tripoint( 4, 4, 0 );
     where.x() -= where.x() % 2;
     where.y() -= where.y() % 2;
+    // Force the terrain as well as the load: `load` on a tile nothing has generated can hand back a
+    // default OMT, and the mapgen then writes over someone else's predecessor -- which is how this
+    // case read back t_wall_wood instead of the door on a run where the avatar started elsewhere.
+    overmap_buffer.ter_set( where, oter_id( "scp_9044_house" ) );
     tinymap tm;
     tm.load( where, true );
     // tinymap::load() gives a default OMT; the terrain's own mapgen has to be run explicitly.
@@ -1121,6 +1236,11 @@ TEST_CASE( "scps_8001_the_lamp_room_generates", "[scps]" )
     tripoint_abs_omt where = get_avatar().pos_abs_omt() + tripoint( 8, 8, 0 );
     where.x() -= where.x() % 2;
     where.y() -= where.y() % 2;
+    // Forcing the terrain before loading is what makes this case independent of where world generation
+    // happened to put the avatar: the base is derived from the avatar's position, the seed is fresh
+    // every run (tests/Makefile `--rng-seed time`), and without this the tinymap could inherit an
+    // earlier case's tile and read back someone else's map.  This is the flake the harness described.
+    overmap_buffer.ter_set( where, oter_id( "field" ) );
     tinymap tm;
     tm.load( where, true );
     mapgendata md( where, *tm.cast_to_map(), 0.0f, calendar::turn, nullptr );
