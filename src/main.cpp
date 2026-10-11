@@ -296,7 +296,7 @@ struct cli_opts {
     std::string selector_run; /** run this selector EOC after loading, for its dump only */
     std::string eoc_run; /** run this EOC after loading, for its effects */
     int advance_turns = 0; /** pass this many real game turns before the snapshot */
-    std::string advance_key = "."; /** the key a turn of waiting is bound to (see `wait`) */
+    std::string advance_key = "."; /** the key that ends a turn ('.' = the shipped `pause` binding; `wait` is '|' and opens a menu, which would stall) */
     std::vector<std::string> widget_dump; /** render these widget ids into the snapshot */
     bool new_character = false; /** create a character non-interactively and start */
     bool snapshot = false; /** write a situation snapshot on the first turn */
@@ -460,7 +460,8 @@ cli_opts parse_commandline( int argc, const char **argv )
             },
             {
                 "--advance-key", "<key>",
-                "The key bound to waiting for a turn (default '.', the shipped `wait` binding)",
+                "The key that ends a turn (default '.', the shipped `pause` binding; `wait` is '|' "
+                "and opens a menu, which would stall)",
                 section_default,
                 1,
                 [&result]( int, const char **params ) -> int {
@@ -1076,6 +1077,134 @@ static void load_input_script( const std::string &path )
     }
 }
 
+// The advance record, rewritten at every step.  A turn that blocks never returns here, so a single
+// end-of-loop write would leave a hang indistinguishable from a run that never started advancing.
+static void write_advance_record( const cli_opts &cli, int turn_before, const std::string &phase )
+{
+    try {
+        const cata_path out = PATH_INFO::world_base_save_path() / "mcp_advance.result.json";
+        std::ofstream fout( out.get_unrelative_path(), std::ios::trunc );
+        if( fout.is_open() ) {
+            const int advanced = to_turn<int>( calendar::turn ) - turn_before;
+            JsonOut jout( fout );
+            jout.start_object();
+            jout.member( "requested", cli.advance_turns );
+            jout.member( "turns", advanced );
+            jout.member( "keys_left", inp_mngr.injected_input_remaining() );
+            jout.member( "phase", phase );
+            // Only meaningful once the loop is done; mid-turn, fewer turns than requested just means
+            // the rest are still to come.
+            jout.member( "stopped_early", phase == "done" && advanced < cli.advance_turns );
+            jout.end_object();
+        }
+    } catch( const std::exception & ) {
+        // diagnostics are best effort
+    }
+}
+
+// A marker written whenever a seam is *reached*, so a missing dump can be told apart from "the hook
+// never ran" (a UI blocked the load first) -- those read very differently.
+static void write_eoc_marker( const std::string &filename, const std::string &eoc_id, bool valid )
+{
+    try {
+        const cata_path marker = PATH_INFO::world_base_save_path() / filename;
+        std::ofstream mout( marker.get_unrelative_path(), std::ios::trunc );
+        if( mout.is_open() ) {
+            JsonOut mjout( mout );
+            mjout.start_object();
+            mjout.member( "eoc", eoc_id );
+            mjout.member( "valid", valid );
+            mjout.end_object();
+        }
+    } catch( const std::exception & ) {
+        // diagnostics are best effort
+    }
+}
+
+// Run one EOC by id, for its dump or its effects, marking that the hook was reached.
+static void run_startup_eoc( const std::string &eoc_id, const std::string &marker_name,
+                             const std::string &label )
+{
+    const effect_on_condition_id eoc( eoc_id );
+    const bool valid = eoc.is_valid();
+    write_eoc_marker( marker_name, eoc_id, valid );
+    if( valid ) {
+        dialogue d( get_talker_for( get_avatar() ), nullptr );
+        eoc->activate( d );
+    } else {
+        debugmsg( "%s: no effect_on_condition with id '%s'", label, eoc_id );
+    }
+}
+
+// Startup seams: the fixtures and observations the harness applies once the avatar exists and
+// before the turn loop runs.  Shared by both entry points (--new-character and a load) so the two
+// cannot drift -- a difference between them is a difference in what the harness measures.
+static void apply_startup_seams( const cli_opts &cli )
+{
+    if( !cli.pocket_patch.empty() ) {
+        g->apply_pocket_patch( cli.pocket_patch );
+    }
+    if( !cli.var_patch.empty() ) {
+        g->apply_var_patch( cli.var_patch );
+    }
+    if( !cli.widget_dump.empty() ) {
+        g->set_widget_dump_ids( cli.widget_dump );
+    }
+    if( !cli.selector_run.empty() ) {
+        // Run a selector EOC for its dump alone.  This is the only deterministic way to see a menu
+        // that is normally reached by activating a mutation: the mutation list sorts by id, and
+        // RETURN activates the *selected* entry, so a key script cannot pick one.
+        set_selector_dry_run( true );
+        set_selector_dump_enabled( true );
+        run_startup_eoc( cli.selector_run, "mcp_selector.run.json", "selector-run" );
+    }
+    if( !cli.eoc_run.empty() ) {
+        // Run any EOC for its effects, with no UI and no trigger: --selector-run generalised, so a
+        // scenario can test an EOC's effect without the screen that normally opens it.
+        run_startup_eoc( cli.eoc_run, "mcp_eoc.run.json", "eoc-run" );
+    }
+    // The selector dry run is for the startup hook alone.  Leaving it armed would make every later
+    // selector in this process return early without showing a menu -- a silent no-op that reads
+    // like a mod bug rather than a seam one.
+    set_selector_dry_run( false );
+    set_selector_dump_enabled( false );
+
+    if( cli.advance_turns > 0 ) {
+        // Pass real game turns the way a player waiting does: queue the key that ends a turn and run
+        // the turn loop, once per turn.  A calendar jump would not accrue anything (rates are per
+        // turn), and an in-game key is no substitute -- too slow, and a script's keys get eaten by
+        // the load.  This is what makes a per-hour mechanic assertable.
+        //
+        // BOUNDED BY THE QUEUE, NOT BY THE COUNT.  do_turn() blocks when nothing answers it, so if
+        // the keys were consumed elsewhere -- a modal on screen, usually -- advancing anyway would
+        // hang the process inside this hook.  Stop when the queue is empty, and record how far it
+        // got so the caller can be told rather than left guessing.
+        const int turn_before = to_turn<int>( calendar::turn );
+        inp_mngr.inject_input_events( std::vector<std::string>(
+                                          static_cast<size_t>( cli.advance_turns ), cli.advance_key ) );
+        write_advance_record( cli, turn_before, "before-first-turn" );
+        for( int i = 0; i < cli.advance_turns; i++ ) {
+            if( inp_mngr.injected_input_remaining() <= 0 ) {
+                // The queue is dry: something ate the keys and a further do_turn() would block with
+                // nothing to answer it.  Stop, and let the record say where.
+                //
+                // This cannot rescue a turn that is already blocked *inside* do_turn() -- a modal
+                // that owns the UI does that, which is why a save that loads into a menu is not a
+                // candidate for --advance-turns until that menu is answered.
+                break;
+            }
+            write_advance_record( cli, turn_before, "in-turn-" + std::to_string( i ) );
+            if( g->do_turn() ) {
+                break;
+            }
+        }
+        write_advance_record( cli, turn_before, "done" );
+    }
+    if( cli.snapshot ) {
+        g->request_snapshot();
+    }
+}
+
 void run_game_loop( cli_opts &cli )
 {
     main_menu::queued_world_to_load = std::move( cli.world );
@@ -1100,136 +1229,14 @@ void run_game_loop( cli_opts &cli )
         if( !g->start_new_character() ) {
             return;
         }
-        if( !cli.pocket_patch.empty() ) {
-            g->apply_pocket_patch( cli.pocket_patch );
-        }
-        if( !cli.var_patch.empty() ) {
-            g->apply_var_patch( cli.var_patch );
-        }
-        if( !cli.widget_dump.empty() ) {
-            g->set_widget_dump_ids( cli.widget_dump );
-        }
-        if( !cli.selector_run.empty() ) {
-            // Run a selector EOC for its dump alone.  This is the only deterministic way to see a
-            // menu that is normally reached by activating a mutation: the mutation list sorts by
-            // id, and RETURN activates the *selected* entry, so a key script cannot pick one.
-            set_selector_dry_run( true );
-            set_selector_dump_enabled( true );
-            const effect_on_condition_id eoc( cli.selector_run );
-            // A marker, so a missing dump can be told apart from "no selector was built": it is
-            // written whenever the hook is *reached*, and mcp_selector.json appears only if the
-            // EOC actually ran a selector.  Absent marker = the hook never ran (a UI blocked the
-            // load first), which reads very differently from a gated EOC.
-            try {
-                const cata_path marker =
-                    PATH_INFO::world_base_save_path() / "mcp_selector.run.json";
-                std::ofstream mout( marker.get_unrelative_path(), std::ios::trunc );
-                if( mout.is_open() ) {
-                    JsonOut mjout( mout );
-                    mjout.start_object();
-                    mjout.member( "eoc", cli.selector_run );
-                    mjout.member( "valid", eoc.is_valid() );
-                    mjout.end_object();
-                }
-            } catch( const std::exception & ) {
-                // diagnostics are best effort
-            }
-            if( eoc.is_valid() ) {
-                dialogue d( get_talker_for( get_avatar() ), nullptr );
-                eoc->activate( d );
-            } else {
-                debugmsg( "selector-run: no effect_on_condition with id '%s'",
-                          cli.selector_run );
-            }
-        }
-        if( !cli.eoc_run.empty() ) {
-            // Run any EOC for its effects, with no UI and no trigger: --selector-run generalised,
-            // so a scenario can test an EOC's effect without the screen that normally opens it.
-            const effect_on_condition_id eoc( cli.eoc_run );
-            try {
-                const cata_path marker = PATH_INFO::world_base_save_path() / "mcp_eoc.run.json";
-                std::ofstream mout( marker.get_unrelative_path(), std::ios::trunc );
-                if( mout.is_open() ) {
-                    JsonOut mjout( mout );
-                    mjout.start_object();
-                    mjout.member( "eoc", cli.eoc_run );
-                    mjout.member( "valid", eoc.is_valid() );
-                    mjout.end_object();
-                }
-            } catch( const std::exception & ) {
-                // diagnostics are best effort
-            }
-            if( eoc.is_valid() ) {
-                dialogue d( get_talker_for( get_avatar() ), nullptr );
-                eoc->activate( d );
-            } else {
-                debugmsg( "eoc-run: no effect_on_condition with id '%s'", cli.eoc_run );
-            }
-        }
-        if( cli.advance_turns > 0 ) {
-            // Pass real game turns the way a player waiting does: queue the wait key and run the
-            // turn loop, once per turn.  A calendar jump would not accrue anything (rates are per
-            // turn), and an in-game wait key is no substitute -- too slow, and a script's keys get
-            // eaten by the load.  This is what makes a per-hour mechanic assertable.
-            //
-            // BOUNDED BY THE QUEUE, NOT BY THE COUNT.  do_turn() blocks when nothing answers it, so
-            // if the keys were consumed elsewhere -- a modal on screen, usually -- advancing anyway
-            // would hang the process inside this hook, which is exactly what a save-continuation
-            // run did.  Stop when the queue is empty, and write how far it got so the caller can be
-            // told rather than left guessing.
-            // The record is rewritten at every step, not once at the end.  A turn that blocks never
-            // returns here, so a single end-of-loop write leaves a hang indistinguishable from a
-            // run that never started advancing -- which is exactly how this was misread once.
-            const int turn_before = to_turn<int>( calendar::turn );
-            auto write_advance = [&]( const std::string & phase ) {
-                try {
-                    const cata_path adv_out =
-                        PATH_INFO::world_base_save_path() / "mcp_advance.result.json";
-                    std::ofstream aout( adv_out.get_unrelative_path(), std::ios::trunc );
-                    if( aout.is_open() ) {
-                        const int advanced = to_turn<int>( calendar::turn ) - turn_before;
-                        const bool done = phase == "done";
-                        JsonOut ajout( aout );
-                        ajout.start_object();
-                        ajout.member( "requested", cli.advance_turns );
-                        ajout.member( "turns", advanced );
-                        ajout.member( "keys_left", inp_mngr.injected_input_remaining() );
-                        ajout.member( "phase", phase );
-                        // Only meaningful once the loop is done; mid-turn, fewer turns than
-                        // requested just means the rest are still to come.
-                        ajout.member( "stopped_early", done && advanced < cli.advance_turns );
-                        ajout.end_object();
-                    }
-                } catch( const std::exception & ) {
-                    // diagnostics are best effort
-                }
-            };
-            inp_mngr.inject_input_events( std::vector<std::string>(
-                                              static_cast<size_t>( cli.advance_turns ),
-                                              cli.advance_key ) );
-            write_advance( "before-first-turn" );
-            for( int i = 0; i < cli.advance_turns; i++ ) {
-                if( inp_mngr.injected_input_remaining() <= 0 ) {
-                    // The queue is dry: something ate the keys and a further do_turn() would block
-                    // with nothing to answer it.  Stop, and let the record say where.
-                    //
-                    // This cannot rescue a turn that is already blocked *inside* do_turn() -- a
-                    // modal that owns the UI does that, and it is why a save which loads into a
-                    // menu (a crafting menu at a workbench, in the field) is not a candidate for
-                    // --advance-turns until that menu is answered.  The harness detects and reports
-                    // that case rather than waiting it out; see BUG-playtest-run-hang-FOLLOWUP.
-                    break;
-                }
-                write_advance( "in-turn-" + std::to_string( i ) );
-                if( g->do_turn() ) {
-                    break;
-                }
-            }
-            write_advance( "done" );
-        }
-        if( cli.snapshot ) {
-            g->request_snapshot();
-        }
+        apply_startup_seams( cli );
+
+        // The same tail as the load path below, deliberately: a new character is also a game
+        // beginning.  Without this send, the EOCs that base-game content and the mod under test
+        // hang off event_type::game_begin never fire on this path -- so a harness would measure
+        // different things depending on which entrance it used.
+        shared_ptr_fast<ui_adaptor> ui = g->create_or_get_main_ui_adaptor();
+        get_event_bus().send<event_type::game_begin>( getVersionString() );
         while( !g->do_turn() ) {}
         return;
     }
@@ -1240,136 +1247,7 @@ void run_game_loop( cli_opts &cli )
             break;
         }
 
-        if( !cli.pocket_patch.empty() ) {
-            g->apply_pocket_patch( cli.pocket_patch );
-        }
-        if( !cli.var_patch.empty() ) {
-            g->apply_var_patch( cli.var_patch );
-        }
-        if( !cli.widget_dump.empty() ) {
-            g->set_widget_dump_ids( cli.widget_dump );
-        }
-        if( !cli.selector_run.empty() ) {
-            // Run a selector EOC for its dump alone.  This is the only deterministic way to see a
-            // menu that is normally reached by activating a mutation: the mutation list sorts by
-            // id, and RETURN activates the *selected* entry, so a key script cannot pick one.
-            set_selector_dry_run( true );
-            set_selector_dump_enabled( true );
-            const effect_on_condition_id eoc( cli.selector_run );
-            // A marker, so a missing dump can be told apart from "no selector was built": it is
-            // written whenever the hook is *reached*, and mcp_selector.json appears only if the
-            // EOC actually ran a selector.  Absent marker = the hook never ran (a UI blocked the
-            // load first), which reads very differently from a gated EOC.
-            try {
-                const cata_path marker =
-                    PATH_INFO::world_base_save_path() / "mcp_selector.run.json";
-                std::ofstream mout( marker.get_unrelative_path(), std::ios::trunc );
-                if( mout.is_open() ) {
-                    JsonOut mjout( mout );
-                    mjout.start_object();
-                    mjout.member( "eoc", cli.selector_run );
-                    mjout.member( "valid", eoc.is_valid() );
-                    mjout.end_object();
-                }
-            } catch( const std::exception & ) {
-                // diagnostics are best effort
-            }
-            if( eoc.is_valid() ) {
-                dialogue d( get_talker_for( get_avatar() ), nullptr );
-                eoc->activate( d );
-            } else {
-                debugmsg( "selector-run: no effect_on_condition with id '%s'",
-                          cli.selector_run );
-            }
-        }
-        if( !cli.eoc_run.empty() ) {
-            // Run any EOC for its effects, with no UI and no trigger: --selector-run generalised,
-            // so a scenario can test an EOC's effect without the screen that normally opens it.
-            const effect_on_condition_id eoc( cli.eoc_run );
-            try {
-                const cata_path marker = PATH_INFO::world_base_save_path() / "mcp_eoc.run.json";
-                std::ofstream mout( marker.get_unrelative_path(), std::ios::trunc );
-                if( mout.is_open() ) {
-                    JsonOut mjout( mout );
-                    mjout.start_object();
-                    mjout.member( "eoc", cli.eoc_run );
-                    mjout.member( "valid", eoc.is_valid() );
-                    mjout.end_object();
-                }
-            } catch( const std::exception & ) {
-                // diagnostics are best effort
-            }
-            if( eoc.is_valid() ) {
-                dialogue d( get_talker_for( get_avatar() ), nullptr );
-                eoc->activate( d );
-            } else {
-                debugmsg( "eoc-run: no effect_on_condition with id '%s'", cli.eoc_run );
-            }
-        }
-        if( cli.advance_turns > 0 ) {
-            // Pass real game turns the way a player waiting does: queue the wait key and run the
-            // turn loop, once per turn.  A calendar jump would not accrue anything (rates are per
-            // turn), and an in-game wait key is no substitute -- too slow, and a script's keys get
-            // eaten by the load.  This is what makes a per-hour mechanic assertable.
-            //
-            // BOUNDED BY THE QUEUE, NOT BY THE COUNT.  do_turn() blocks when nothing answers it, so
-            // if the keys were consumed elsewhere -- a modal on screen, usually -- advancing anyway
-            // would hang the process inside this hook, which is exactly what a save-continuation
-            // run did.  Stop when the queue is empty, and write how far it got so the caller can be
-            // told rather than left guessing.
-            // The record is rewritten at every step, not once at the end.  A turn that blocks never
-            // returns here, so a single end-of-loop write leaves a hang indistinguishable from a
-            // run that never started advancing -- which is exactly how this was misread once.
-            const int turn_before = to_turn<int>( calendar::turn );
-            auto write_advance = [&]( const std::string & phase ) {
-                try {
-                    const cata_path adv_out =
-                        PATH_INFO::world_base_save_path() / "mcp_advance.result.json";
-                    std::ofstream aout( adv_out.get_unrelative_path(), std::ios::trunc );
-                    if( aout.is_open() ) {
-                        const int advanced = to_turn<int>( calendar::turn ) - turn_before;
-                        const bool done = phase == "done";
-                        JsonOut ajout( aout );
-                        ajout.start_object();
-                        ajout.member( "requested", cli.advance_turns );
-                        ajout.member( "turns", advanced );
-                        ajout.member( "keys_left", inp_mngr.injected_input_remaining() );
-                        ajout.member( "phase", phase );
-                        // Only meaningful once the loop is done; mid-turn, fewer turns than
-                        // requested just means the rest are still to come.
-                        ajout.member( "stopped_early", done && advanced < cli.advance_turns );
-                        ajout.end_object();
-                    }
-                } catch( const std::exception & ) {
-                    // diagnostics are best effort
-                }
-            };
-            inp_mngr.inject_input_events( std::vector<std::string>(
-                                              static_cast<size_t>( cli.advance_turns ),
-                                              cli.advance_key ) );
-            write_advance( "before-first-turn" );
-            for( int i = 0; i < cli.advance_turns; i++ ) {
-                if( inp_mngr.injected_input_remaining() <= 0 ) {
-                    // The queue is dry: something ate the keys and a further do_turn() would block
-                    // with nothing to answer it.  Stop, and let the record say where.
-                    //
-                    // This cannot rescue a turn that is already blocked *inside* do_turn() -- a
-                    // modal that owns the UI does that, and it is why a save which loads into a
-                    // menu (a crafting menu at a workbench, in the field) is not a candidate for
-                    // --advance-turns until that menu is answered.  The harness detects and reports
-                    // that case rather than waiting it out; see BUG-playtest-run-hang-FOLLOWUP.
-                    break;
-                }
-                write_advance( "in-turn-" + std::to_string( i ) );
-                if( g->do_turn() ) {
-                    break;
-                }
-            }
-            write_advance( "done" );
-        }
-        if( cli.snapshot ) {
-            g->request_snapshot();
-        }
+        apply_startup_seams( cli );
 
         shared_ptr_fast<ui_adaptor> ui = g->create_or_get_main_ui_adaptor();
         get_event_bus().send<event_type::game_begin>( getVersionString() );
