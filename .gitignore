@@ -343,3 +343,15 @@ weakpoint_hit_distribution.csv
 # they cannot swallow same-named files elsewhere in the tree.
 /err_*.txt
 /out_*.txt
+
+# The harness's per-run scratch, written to the userdir by cdda-mcp-playtest:
+# the key script it will send, and the variable fixture it will apply.  Fixed
+# names, rewritten every run -- they are inputs, not content, and one of them
+# holds whatever debug patch the caller asked for.  Never commit them.
+/mcp_playtest_keys.txt
+/mcp_var_patch.json
+/mcp_var_patch.result.json
+/mcp_advance.result.json
+/mcp_eoc.run.json
+/mcp_snapshot.json
+/mcp_dialogue.json
