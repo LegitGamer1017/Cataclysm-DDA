@@ -327,3 +327,19 @@ weakpoint_hit_distribution.csv
 /data/mods/viltrumite_dna
 /data/mods/visible-extras
 /data/mods/archive
+/data/mods/PlayingCards
+/data/mods/Zombies-have-CBM-for-DDA-Ito
+/data/mods/cdda-scps
+
+# --- local workspace noise (not upstream) ---------------------------------
+# build-cmake/ is the CMake+Ninja tree DEV_SETUP documents; the ignore list had
+# /build/ and /cmake-build-debug/ but not this one, so it showed as untracked.
+/build-cmake/
+
+# Verified pre-change backups of a playtest world (save-backup-<stamp>/TestWorldN).
+/save-backup-*/
+
+# Stray build/plugin captures written to the repo root by tooling.  Anchored so
+# they cannot swallow same-named files elsewhere in the tree.
+/err_*.txt
+/out_*.txt
