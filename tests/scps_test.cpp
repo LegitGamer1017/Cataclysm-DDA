@@ -9,6 +9,7 @@
 #include "dialogue.h"
 #include "effect_on_condition.h"
 #include "faction.h"
+#include "field_type.h"
 #include "game.h"
 #include "item.h"
 #include "item_group.h"
@@ -118,6 +119,38 @@ static const trait_id trait_second_chance_spent( "SCP_8000_SECOND_CHANCE_SPENT" 
 static const effect_on_condition_id eoc_scp_8000_rift( "EOC_SCP_8000_RIFT" );
 static const effect_on_condition_id eoc_scp_8000_rift_home( "EOC_SCP_8000_RIFT_HOME" );
 static const effect_on_condition_id eoc_scp_8000_book_saves_you( "EOC_SCP_8000_BOOK_SAVES_YOU" );
+
+// SCP-8001: the island of Last Watch, the Tower of Sunset, the edge itself, and the clockwork
+// keeper who has tended the light since before anyone can remember.
+static const oter_str_id oter_scp_8001_edge( "scp_8001_edge" );
+static const oter_str_id oter_scp_8001_edge_s( "scp_8001_edge_s" );
+static const oter_str_id oter_scp_8001_walkway( "scp_8001_walkway" );
+static const oter_str_id oter_scp_8001_woods_e( "scp_8001_woods_e" );
+static const oter_str_id oter_scp_8001_bay( "scp_8001_bay" );
+static const oter_str_id oter_scp_8001_stair( "scp_8001_stair" );
+static const oter_str_id oter_scp_8001_hill( "scp_8001_hill" );
+static const oter_str_id oter_scp_8001_graves( "scp_8001_graves" );
+static const oter_str_id oter_scp_8001_outcrop( "scp_8001_outcrop" );
+static const oter_str_id oter_scp_8001_woods( "scp_8001_woods" );
+static const oter_str_id oter_scp_8001_wood( "scp_8001_wood" );
+static const oter_str_id oter_scp_8001_tower( "scp_8001_tower" );
+static const oter_str_id oter_scp_8001_tower_z1( "scp_8001_tower_z1" );
+static const oter_str_id oter_scp_8001_tower_z2( "scp_8001_tower_z2" );
+static const furn_str_id furn_scp_8001_lamp( "f_scp_8001_lamp" );
+static const furn_str_id furn_scp_8001_reflector( "f_scp_8001_reflector" );
+static const furn_str_id furn_scp_8001_headstone( "f_scp_8001_headstone" );
+static const furn_str_id furn_scp_8001_memorial( "f_scp_8001_memorial" );
+static const mtype_id mon_scp_8001_aurelie( "mon_scp_8001_aurelie" );
+static const itype_id itype_scp_8001_chart( "scp_8001_chart" );
+static const itype_id itype_scp_8001_chart_annotated( "scp_8001_chart_annotated" );
+static const itype_id itype_scp_8001_mp3_dead( "scp_8001_mp3_dead" );
+static const itype_id itype_scp_8001_lens( "scp_8001_lens" );
+static const itype_id itype_scp_8001_record( "scp_8001_record" );
+static const field_type_str_id fd_scp_8001_spray( "fd_scp_8001_spray" );
+static const effect_on_condition_id eoc_scp_8001_chart( "EOC_SCP_8001_CHART" );
+static const effect_on_condition_id eoc_scp_8001_chart_studied( "EOC_SCP_8001_CHART_STUDIED" );
+static const effect_on_condition_id eoc_scp_8001_falls( "EOC_SCP_8001_FALLS" );
+static const effect_on_condition_id eoc_scp_8001_memorial( "EOC_SCP_8001_MEMORIAL" );
 
 // SCP-494: the gloves and the material trades they enable.
 static const itype_id itype_scp_494( "scp_494" );
@@ -499,11 +532,14 @@ TEST_CASE( "scps_287_scales_phantoms_with_charge", "[scps]" )
         return;
     }
     static const itype_id itype_battery( "battery" );
-    static const itype_id itype_gloves_rubber( "gloves_rubber" );
+    // The mod's OWN insulated gloves, by their namespaced id.  This used to be core `gloves_rubber`,
+    // which only satisfied the safety gate because the mod overwrote that core item -- so the test
+    // was quietly asserting the bug (287-5) rather than the behaviour.
+    static const itype_id itype_scp_287_gloves( "scp_287_gloves" );
 
     clear_map();
     avatar &u = get_avatar();
-    u.wear_item( item( itype_gloves_rubber ) );
+    u.wear_item( item( itype_scp_287_gloves ) );
 
     const auto phantoms = []() {
         int n = 0;
@@ -651,7 +687,13 @@ TEST_CASE( "scps_9044_has_a_way_out", "[scps]" )
         return;
     }
     clear_avatar();
-    const tripoint_abs_omt where( get_avatar().pos_abs_omt() + tripoint( 4, 4, 0 ) );
+    // A tinymap is 2x2 OMTs and load() takes its origin from the EVEN-aligned corner, so the tile
+    // coordinates below are only the OMT we think they are when `where` is already even.  Rounding it
+    // here is what keeps this case independent of where earlier cases left the avatar -- it used to
+    // pass alone and fail in-suite for exactly that reason.
+    tripoint_abs_omt where = get_avatar().pos_abs_omt() + tripoint( 4, 4, 0 );
+    where.x() -= where.x() % 2;
+    where.y() -= where.y() % 2;
     tinymap tm;
     tm.load( where, true );
     // tinymap::load() gives a default OMT; the terrain's own mapgen has to be run explicitly.
@@ -665,9 +707,14 @@ TEST_CASE( "scps_9044_has_a_way_out", "[scps]" )
     CHECK( tm.ter( tripoint_omt_ms{ 11, 18, 0 } ) == ter_id( "t_door_c" ) );
     CHECK( tm.ter( tripoint_omt_ms{ 11, 21, 0 } ) == ter_id( "t_chaingate_c" ) );
 
-    // Down the hall to the front door, then across the drive to the gate in the fence.
-    for( int y = 6; y <= 20; y++ ) {
-        CHECK( tm.ter( tripoint_omt_ms{ 11, y, 0 } ) != ter_id( "t_wall_wood" ) );
+    // Down the hall to the front door, then across the drive to the gate in the fence.  "Not a wall"
+    // was not enough: t_tree and t_chainfence satisfy that too and are every bit as impassable, which
+    // is how a gate opening into the tree border went unnoticed.  The row now runs to 23, the map edge.
+    for( int y = 6; y <= 23; y++ ) {
+        const ter_id t = tm.ter( tripoint_omt_ms{ 11, y, 0 } );
+        CHECK( t != ter_id( "t_wall_wood" ) );
+        CHECK( t != ter_id( "t_chainfence" ) );
+        CHECK( t != ter_id( "t_tree" ) );
     }
 }
 
@@ -715,7 +762,11 @@ TEST_CASE( "scps_9044_reaches_the_end_once", "[scps]" )
     REQUIRE( eoc_scp_9044_step->activate( d ) );
     CHECK( you.get_value( "scp_9044_depth" ) == 19 );
     CHECK( you.has_effect( effect_scp_9044_touched ) );
-    CHECK( count_of( itype_id( "ring_silver" ) ) >= 1 );
+    // The id here has to be the REAL one.  It used to read `ring_silver`, which does not exist: the
+    // engine's missing-item fallback fabricates an item carrying whatever id was asked for, so this
+    // assertion passed while every player at depth 19 got an `undefined-ring_silver` and a logged
+    // error.  Asserting a real id is the whole point of the check.
+    CHECK( count_of( itype_id( "silver_ring" ) ) >= 1 );
 
     // Twenty-two: "Welcome home."  The gift, on the lap it belongs to.
     you.set_value( "scp_9044_depth", 21 );
@@ -902,4 +953,243 @@ TEST_CASE( "scps_8000_rift_actually_travels", "[scps]" )
     // And back out the far side of it.
     REQUIRE( eoc_scp_8000_rift_home->activate( d ) );
     CHECK( g->get_dimension_prefix() == home );
+}
+
+// SCP-8001: the edge of the world.  The island is eleven overmap tiles and the tower is three
+// levels of one of them, so what is worth checking is that the pieces carrying the mechanic exist
+// at all -- the mist that hides the drop, the lamp that makes the tower a lighthouse, the headstones
+// and the memorial that name the island, and the keeper standing in the middle of it.
+TEST_CASE( "scps_8001_is_registered", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    CHECK( oter_scp_8001_edge.is_valid() );
+    CHECK( oter_scp_8001_edge_s.is_valid() );
+    CHECK( oter_scp_8001_walkway.is_valid() );
+    CHECK( oter_scp_8001_woods_e.is_valid() );
+    CHECK( oter_scp_8001_bay.is_valid() );
+    CHECK( oter_scp_8001_stair.is_valid() );
+    CHECK( oter_scp_8001_hill.is_valid() );
+    CHECK( oter_scp_8001_graves.is_valid() );
+    CHECK( oter_scp_8001_outcrop.is_valid() );
+    CHECK( oter_scp_8001_woods.is_valid() );
+    CHECK( oter_scp_8001_wood.is_valid() );
+    CHECK( oter_scp_8001_tower.is_valid() );
+    CHECK( oter_scp_8001_tower_z1.is_valid() );
+    CHECK( oter_scp_8001_tower_z2.is_valid() );
+
+    REQUIRE( furn_scp_8001_lamp.is_valid() );
+    CHECK( furn_scp_8001_reflector.is_valid() );
+    CHECK( furn_scp_8001_headstone.is_valid() );
+    CHECK( furn_scp_8001_memorial.is_valid() );
+
+    REQUIRE( mon_scp_8001_aurelie.is_valid() );
+    CHECK( itype_scp_8001_chart.is_valid() );
+    CHECK( itype_scp_8001_chart_annotated.is_valid() );
+    CHECK( itype_scp_8001_mp3_dead.is_valid() );
+    CHECK( itype_scp_8001_lens.is_valid() );
+    CHECK( itype_scp_8001_record.is_valid() );
+
+    CHECK( fd_scp_8001_spray.is_valid() );
+    CHECK( eoc_scp_8001_chart.is_valid() );
+    CHECK( eoc_scp_8001_chart_studied.is_valid() );
+    CHECK( eoc_scp_8001_falls.is_valid() );
+    CHECK( eoc_scp_8001_memorial.is_valid() );
+}
+
+// The spray is the whole reason the edge reads as an edge -- it is what hides whatever is past the
+// rail.  A field with a half_life would thin out and clear an hour into a run, so the claims worth
+// testing are that this one never ages, that it renews itself out of fd_fog rather than decaying
+// away, and that it is opaque, because a transparent field would leave the drop in plain sight.
+TEST_CASE( "scps_8001_the_spray_never_clears", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    REQUIRE( fd_scp_8001_spray.is_valid() );
+
+    // Resolve through the *string* id, as every other field test in the tree does.  `field_type_id`
+    // is the enum-backed id: for a field declared without a `legacy_enum_id` it quietly yields
+    // fd_null and `is_valid()` still says true, so a test written against it passes while reading a
+    // completely different field.  Asserting the resolved object's own id is the guard against that.
+    const field_type &spray = *fd_scp_8001_spray;
+    CHECK( spray.id.str() == "fd_scp_8001_spray" );
+    CHECK( spray.get_intensity_level( 0 ).name.translated() == "spray" );
+    CHECK( spray.half_life == 0_turns );
+    CHECK_FALSE( spray.wandering_field.is_null() );
+    REQUIRE_FALSE( spray.intensity_levels.empty() );
+    CHECK_FALSE( spray.intensity_levels.front().transparent );
+}
+
+// The tower is a lighthouse before it is anything else, and core's own lighthouse light emits no
+// light at all -- it is scenery.  240 is the practical ceiling: the light cache is one reality
+// bubble across, so a bigger number buys nothing the player can actually see.
+TEST_CASE( "scps_8001_the_lamp_is_the_light", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    REQUIRE( furn_scp_8001_lamp.is_valid() );
+    CHECK( furn_scp_8001_lamp->light_emitted == 240 );
+}
+
+// Aurélie is the fifth thing in this mod that would rather talk than fight, after the bear, Luana,
+// Spaghetti Jones and Wallace.  Her conversation is her content: strip the topics and she is a piece
+// of clockwork scenery standing in a library, which is a different and much smaller story.
+TEST_CASE( "scps_8001_aurelie_would_rather_talk", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    REQUIRE( mon_scp_8001_aurelie.is_valid() );
+    CHECK_FALSE( mon_scp_8001_aurelie->chat_topics.empty() );
+}
+
+// SCP-8001 hangs off SCP-8000: the SEEKER can be asked about the edge of the world as well, which
+// makes the island an eleventh catalogue entry and pushes the machine's collapse one scan further
+// out.  The counter is what every branch of the chain reads, so it is what this drives -- the
+// reveal itself points at a special a test world may never have placed.
+TEST_CASE( "scps_8001_seeker_knows_about_the_edge", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    clear_avatar();
+    avatar &you = get_avatar();
+    dialogue d( get_talker_for( you ), nullptr );
+
+    you.set_value( "scp_8000_scan", 10 );
+    REQUIRE( eoc_scp_8000_seeker->activate( d ) );
+    CHECK( you.get_value( "scp_8000_scan" ) == 11 );
+
+    // The ruin used to sit at eleven; with the island in the catalogue it has moved to twelve.
+    REQUIRE( eoc_scp_8000_seeker->activate( d ) );
+    CHECK( you.get_value( "scp_8000_scan" ) == 12 );
+}
+
+// The chart is the way in: studying it reveals the island and swaps itself for the annotated copy.
+// `transform_item` wants an item context that a bare dialogue does not have, so what this proves is
+// that the effect chain executes and resolves -- the reveal half is covered by the loader and by the
+// SEEKER case above.
+TEST_CASE( "scps_8001_the_chart_can_be_studied", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    clear_avatar();
+    avatar &you = get_avatar();
+    dialogue d( get_talker_for( you ), nullptr );
+
+    // Only the *studied* half is driven.  EOC_SCP_8001_CHART runs a `target_params` search for the
+    // island, and the engine logs `Unable to find and assign mission target` (a blocking error screen
+    // in a real game, and a hard test failure here) whenever the special cannot be found or created
+    // within its 540-tile radius -- which a test world, having no ocean in range, never can.  The
+    // search itself is content that only resolves in a full world; what is checkable here is that the
+    // annotated-copy effect chain executes.
+    CHECK( eoc_scp_8001_chart_studied->activate( d ) );
+}
+
+// Aurélie's request is gated on three modern books *by name*.  If any of them ever leaves core her
+// request becomes unanswerable, and nothing else in the mod would notice -- so this is the guard
+// that the offer can still be completed at all.  (The response itself is dialogue, which a test
+// cannot drive; those three ids plus the two things she hands back are what is checkable.)
+TEST_CASE( "scps_8001_aurelie_can_still_be_answered", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    CHECK( itype_id( "textbook_robots" ).is_valid() );
+    CHECK( itype_id( "SICP" ).is_valid() );
+    CHECK( itype_id( "emergency_book" ).is_valid() );
+
+    CHECK( itype_scp_8001_lens.is_valid() );
+    CHECK( itype_scp_8001_record.is_valid() );
+}
+
+// The lamp room is one tile, so its mapgen can be generated directly -- and that is worth doing,
+// because "the tower is a lighthouse" is carried entirely by two furniture pieces landing on a real
+// map.  The island itself is a 4x3 multi-tile mapgen whose tiles the loader already proves have
+// mapgen; this is the floor the beam actually comes off.  (The mapgen is written for the tower's
+// first floor and is run here at z0 purely to read its content back.)
+TEST_CASE( "scps_8001_the_lamp_room_generates", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    // Even-aligned, or the tinymap's origin is not `where` and these coordinates read the wrong tile.
+    tripoint_abs_omt where = get_avatar().pos_abs_omt() + tripoint( 8, 8, 0 );
+    where.x() -= where.x() % 2;
+    where.y() -= where.y() % 2;
+    tinymap tm;
+    tm.load( where, true );
+    mapgendata md( where, *tm.cast_to_map(), 0.0f, calendar::turn, nullptr );
+    run_mapgen_func( oter_scp_8001_tower_z1.str(), md );
+
+    CHECK( tm.furn( tripoint_omt_ms{ 11, 8, 0 } ) == furn_id( "f_scp_8001_lamp" ) );
+    CHECK( tm.furn( tripoint_omt_ms{ 12, 12, 0 } ) == furn_id( "f_scp_8001_reflector" ) );
+    CHECK( tm.ter( tripoint_omt_ms{ 11, 8, 0 } ) == ter_id( "t_floor" ) );
+    CHECK( tm.ter( tripoint_omt_ms{ 7, 6, 0 } ) == ter_id( "t_wall" ) );
+    // Everything outside the tower footprint is open air, not a floor floating in the sky.
+    CHECK( tm.ter( tripoint_omt_ms{ 2, 2, 0 } ) == ter_id( "t_open_air" ) );
+    CHECK( tm.ter( tripoint_omt_ms{ 11, 21, 0 } ) == ter_id( "t_open_air" ) );
+}
+
+// The island itself, generated for real.  It is a single 4x3 multi-tile mapgen, so every tile in it
+// is a *slice* of one 96x72 drawing -- and whether those slices land where they should is the one
+// thing no loader check can tell you.  Forcing the overmap terrain before generating matters: the
+// mapgen picks its slice from the terrain `mapgendata` was built against, so it has to be the tile
+// we mean.  Runs at the player's position + 24 so it cannot collide with anything else in the suite.
+TEST_CASE( "scps_8001_the_island_generates_and_the_walkway_ends_over_a_drop", "[scps]" )
+{
+    if( !scps_loaded() ) {
+        return;
+    }
+    // Even-aligned so the tinymap's origin IS each `where` (see the note on the 9044 mapgen case).
+    tripoint_abs_omt base = get_avatar().pos_abs_omt() + point( 24, 0 );
+    base.x() -= base.x() % 2;
+    base.y() -= base.y() % 2;
+
+    const auto generate = []( const tripoint_abs_omt & where, const std::string & omt,
+    tinymap & tm ) {
+        overmap_buffer.ter_set( where, oter_id( omt ) );
+        tm.load( where, true );
+        mapgendata md( where, *tm.cast_to_map(), 0.0f, calendar::turn, nullptr );
+        run_mapgen_func( omt, md );
+    };
+
+    // The void tile west of the outcrop, and the outcrop the walkway starts from.
+    tinymap edge;
+    generate( base + point::west * 2, "scp_8001_walkway", edge );
+    // The walkway is decking across island row 36, which is local row 12 of these two slices.
+    CHECK( edge.ter( tripoint_omt_ms{ 12, 12, 0 } ) == ter_id( "t_dock_deep" ) );
+    CHECK( edge.ter( tripoint_omt_ms{ 6, 12, 0 } ) == ter_id( "t_dock_deep" ) );
+    // ...and past its westernmost board there is nothing at all.  This is the edge of the world.
+    CHECK( edge.ter( tripoint_omt_ms{ 5, 12, 0 } ) == ter_id( "t_open_air" ) );
+    CHECK( edge.ter( tripoint_omt_ms{ 0, 0, 0 } ) == ter_id( "t_open_air" ) );
+    // A drop rather than a step: open air has no floor, so walking onto it is a fall.
+    CHECK( edge.has_flag( ter_furn_flag::TFLAG_NO_FLOOR, tripoint_omt_ms{ 0, 0, 0 } ) );
+
+    tinymap outcrop;
+    generate( base + point::west, "scp_8001_outcrop", outcrop );
+    CHECK( outcrop.ter( tripoint_omt_ms{ 2, 12, 0 } ) == ter_id( "t_dock_deep" ) );
+    CHECK( outcrop.ter( tripoint_omt_ms{ 0, 12, 0 } ) == ter_id( "t_dock_deep" ) );
+
+    // The Tower of Sunset: walls, the east door, and the shelves standing on a floor -- which is the
+    // assertion that would have caught the library being built on grass.
+    tinymap tower;
+    generate( base, "scp_8001_tower", tower );
+    CHECK( tower.ter( tripoint_omt_ms{ 16, 6, 0 } ) == ter_id( "t_wall" ) );
+    CHECK( tower.ter( tripoint_omt_ms{ 16, 11, 0 } ) == ter_id( "t_door_c" ) );
+    CHECK( tower.furn( tripoint_omt_ms{ 11, 7, 0 } ) == furn_id( "f_bookcase" ) );
+    CHECK( tower.ter( tripoint_omt_ms{ 11, 7, 0 } ) == ter_id( "t_floor" ) );
+
+    // The graveyard, and the collapsed marker that named the island by accident.
+    tinymap graves;
+    generate( base + point::east, "scp_8001_graves", graves );
+    CHECK( graves.furn( tripoint_omt_ms{ 4, 4, 0 } ) == furn_id( "f_scp_8001_headstone" ) );
+
+    tinymap stair;
+    generate( base + point::east * 2, "scp_8001_stair", stair );
+    CHECK( stair.furn( tripoint_omt_ms{ 13, 10, 0 } ) == furn_id( "f_scp_8001_memorial" ) );
 }
