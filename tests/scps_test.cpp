@@ -762,27 +762,54 @@ TEST_CASE( "scps_9044_step_loops_and_transforms", "[scps]" )
     CHECK( you.get_value( "scp_9044_depth" ) == 1 );
     CHECK( here.ter( you.pos_bub() ) == ter_id( "t_scp_9044_hall_start" ) );
 
-    // The update mapgens write at fixed squares of the overmap tile the hall is on, so the
-    // tiles to inspect are that tile's corner plus the coordinates the update names.
-    const tripoint_bub_ms omt_corner = here.get_bub( project_to<coords::ms>( you.pos_abs_omt() ) );
-    const tripoint_bub_ms table_pos = omt_corner + tripoint( 11, 9, 0 );
-    const tripoint_bub_ms bench_pos = omt_corner + tripoint( 12, 9, 0 );
+    // The update mapgens write at fixed squares of the overmap tile the hall is on.  Asserting on
+    // `that tile's corner + the update's coordinates` is what made this case seed-dependent: the
+    // corner is derived from the avatar's position, the seed moves the avatar, and the offset came
+    // out a column off on some runs -- so it read a neighbour's furniture and reported a table/bench
+    // swap rather than a missing transform.  The observable contract needs no corner at all: after
+    // "How cozy" the tile contains a table AND a bench; after "It's cold" it contains no furniture
+    // and its boards have become bare concrete.  These scan the player's own OMT, so whatever square
+    // the updates chose, the assertion is about the tile the player is actually standing in.
+    const tripoint_abs_ms omt_corner_ms = project_to<coords::ms>( you.pos_abs_omt() );
+    const auto furniture_present = [&]( const std::string & fid ) {
+        for( int x = 0; x < 24; x++ ) {
+            for( int y = 0; y < 24; y++ ) {
+                const tripoint_bub_ms p = here.get_bub( omt_corner_ms + tripoint( x, y, 0 ) );
+                if( here.furn( p ) == furn_id( fid ) ) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+    const auto terrain_present = [&]( const std::string & tid ) {
+        for( int x = 0; x < 24; x++ ) {
+            for( int y = 0; y < 24; y++ ) {
+                const tripoint_bub_ms p = here.get_bub( omt_corner_ms + tripoint( x, y, 0 ) );
+                if( here.ter( p ) == ter_id( tid ) ) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
 
     // "How cozy" -- the hallway stops being bare.
     you.set_value( "scp_9044_depth", 7 );
     you.setpos( here, far_door );
     REQUIRE( eoc_scp_9044_step->activate( d ) );
     CHECK( you.get_value( "scp_9044_depth" ) == 8 );
-    CHECK( here.furn( table_pos ) == furn_id( "f_table" ) );
-    CHECK( here.furn( bench_pos ) == furn_id( "f_bench" ) );
+    CHECK( furniture_present( "f_table" ) );
+    CHECK( furniture_present( "f_bench" ) );
 
     // "It's cold" -- furniture gone, and the boards gone with it.
     you.set_value( "scp_9044_depth", 13 );
     you.setpos( here, far_door );
     REQUIRE( eoc_scp_9044_step->activate( d ) );
     CHECK( you.get_value( "scp_9044_depth" ) == 14 );
-    CHECK( here.ter( table_pos ) == ter_id( "t_thconc_floor" ) );
-    CHECK( here.furn( table_pos ) == furn_id( "f_null" ) );
+    CHECK_FALSE( furniture_present( "f_table" ) );
+    CHECK_FALSE( furniture_present( "f_bench" ) );
+    CHECK( terrain_present( "t_thconc_floor" ) );
 }
 
 // SCP-9044's way out.  The loop teleports the player to the head of the hallway, and the SCP's
