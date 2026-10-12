@@ -136,6 +136,8 @@
 #include "iuse.h"
 #include "iuse_actor.h"
 #include "json.h"
+#include "json_loader.h"
+#include "widget.h"
 #include "kill_tracker.h"
 #include "level_cache.h"
 #include "lightmap.h"
@@ -2687,6 +2689,8 @@ input_context get_default_mode_input_context()
         ctxt.register_action( "open_distraction_manager" );
         ctxt.register_action( "open_color" );
         ctxt.register_action( "open_world_mods" );
+        ctxt.register_action( "screenshot" );
+        ctxt.register_action( "mcp_snapshot" );
         ctxt.register_action( "debug" );
         ctxt.register_action( "debug_scent" );
         ctxt.register_action( "debug_scent_type" );
@@ -6563,6 +6567,16 @@ bool game::take_screenshot() const
         return false;
     }
 }
+
+bool game::take_screenshot_quiet() const
+{
+    // Fixed path for automation: <world>/screenshots/last.png.  No popup, so a driver is
+    // never blocked waiting on a modal (the popup variant is the player-facing path).
+    cata_path map_directory = PATH_INFO::world_base_save_path() / "screenshots";
+    assure_dir_exist( map_directory );
+    cata_path current_file_path = map_directory / "last.png";
+    return take_screenshot( current_file_path.generic_u8string() );
+}
 #else
 bool game::take_screenshot( std::string_view /*path*/ ) const
 {
@@ -6574,7 +6588,463 @@ bool game::take_screenshot() const
     popup( _( "This binary was not compiled with tiles support." ) );
     return false;
 }
+
+bool game::take_screenshot_quiet() const
+{
+    return false;
+}
 #endif
+
+bool game::start_new_character()
+{
+    // The `--new-character` seam: setup/create/start without any menu.  It lives in a
+    // `game` member because setup() and start_game() are private.
+    try {
+        setup();
+    } catch( const std::exception &err ) {
+        debugmsg( "--new-character setup failed: %s", err.what() );
+        return false;
+    }
+    if( !get_avatar().create( character_type::NOW ) ) {
+        return false;
+    }
+    return start_game();
+}
+
+void game::request_snapshot()
+{
+    queue_snapshot = true;
+}
+
+void game::dump_snapshot()
+{
+    // Live "situation" for automation: the on-disk saves drop uniform/unloaded map
+    // quads and never carry creature/item positions, so this is the only lossless
+    // view of what is actually around the player right now.
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const cata_path out = PATH_INFO::world_base_save_path() / "mcp_snapshot.json";
+    std::ofstream fout( out.get_unrelative_path(), std::ios::trunc );
+    if( !fout.is_open() ) {
+        debugmsg( "mcp snapshot: cannot write %s", out.generic_u8string() );
+        return;
+    }
+    JsonOut json( fout );
+    json.start_object();
+    json.member( "ok", true );
+    json.member( "turn", to_turn<int>( calendar::turn ) );
+    json.member( "calendar", to_string( calendar::turn ) );
+
+    json.member( "player" );
+    json.start_object();
+    json.member( "name", you.get_name() );
+    json.member( "pos" );
+    json.start_array();
+    json.write( you.pos_bub().x() );
+    json.write( you.pos_bub().y() );
+    json.write( you.pos_bub().z() );
+    json.end_array();
+    json.member( "hp", you.get_hp() );
+    json.member( "hp_max", you.get_hp_max() );
+    json.member( "pain", you.get_pain() );
+    json.member( "focus", you.get_focus() );
+    json.member( "stamina", you.get_stamina() );
+    json.member( "activity",
+                 you.activity ? you.activity.id().str() : std::string( "ACT_NULL" ) );
+    // The avatar's character values, written the way the save writes them: a number stays a
+    // number, a string keeps its {"str": ...} form.  A scenario that stops inside a dialogue
+    // cannot save, so this is the only way to assert character state for such a run -- and it
+    // makes a --var-patch type regression visible without a save.
+    json.member( "values", you.get_values() );
+    json.end_object();
+
+    const tripoint_bub_ms center = you.pos_bub();
+    constexpr int radius = 30;
+    json.member( "terrain" );
+    json.start_object();
+    json.member( "radius", radius );
+    json.member( "grid" );
+    json.start_array();
+    for( int dy = -radius; dy <= radius; ++dy ) {
+        json.start_array();
+        for( int dx = -radius; dx <= radius; ++dx ) {
+            const tripoint_bub_ms p = center + tripoint_rel_ms( dx, dy, 0 );
+            json.write( here.ter( p ).id().str() );
+        }
+        json.end_array();
+    }
+    json.end_array();
+    json.end_object();
+
+    json.member( "creatures" );
+    json.start_array();
+    for( shared_ptr_fast<monster> m : get_creature_tracker().get_monsters_list() ) {
+        if( !m ) {
+            continue;
+        }
+        monster &mon = *m;
+        json.start_object();
+        json.member( "id", mon.type->id.str() );
+        json.member( "name", mon.get_name() );
+        json.member( "pos" );
+        json.start_array();
+        json.write( mon.pos_bub().x() );
+        json.write( mon.pos_bub().y() );
+        json.write( mon.pos_bub().z() );
+        json.end_array();
+        json.member( "hp", mon.get_hp() );
+        json.member( "hostile",
+                     mon.attitude_to( get_avatar() ) == Creature::Attitude::HOSTILE );
+        json.end_object();
+    }
+    json.end_array();
+
+    // NPCs are bubble-wide (like monsters) while terrain/items stay radius-limited: there
+    // are only ever a handful, they are what you act on, and the save is not a reliable
+    // source for who is around right now.
+    json.member( "npcs" );
+    json.start_array();
+    const tripoint_abs_sm player_sm = you.pos_abs_sm();
+    for( const shared_ptr_fast<npc> &guy : overmap_buffer.get_npcs_near_player( HALF_MAPSIZE ) ) {
+        if( !guy ) {
+            continue;
+        }
+        const tripoint_rel_sm d = guy->pos_abs_sm() - player_sm;
+        const int ddx = d.x() < 0 ? -d.x() : d.x();
+        const int ddy = d.y() < 0 ? -d.y() : d.y();
+        const Creature::Attitude att = guy->attitude_to( you );
+        const char *att_str = att == Creature::Attitude::FRIENDLY ? "friendly"
+                              : att == Creature::Attitude::HOSTILE ? "hostile" : "neutral";
+        json.start_object();
+        json.member( "name", guy->get_name() );
+        json.member( "pos" );
+        json.start_array();
+        json.write( guy->pos_bub().x() );
+        json.write( guy->pos_bub().y() );
+        json.write( guy->pos_bub().z() );
+        json.end_array();
+        json.member( "distance", ( ddx > ddy ? ddx : ddy ) * SEEX );  // Chebyshev, in tiles
+        json.member( "hp", guy->get_hp() );
+        json.member( "hp_max", guy->get_hp_max() );
+        json.member( "following", guy->is_following() );
+        json.member( "attitude", att_str );
+        if( guy->assigned_camp.has_value() ) {
+            const tripoint_abs_omt &camp = *guy->assigned_camp;
+            json.member( "assigned_camp" );
+            json.start_array();
+            json.write( camp.x() );
+            json.write( camp.y() );
+            json.write( camp.z() );
+            json.end_array();
+        }
+        json.end_object();
+    }
+    json.end_array();
+
+    json.member( "ground_items" );
+    json.start_array();
+    for( int dy = -radius; dy <= radius; ++dy ) {
+        for( int dx = -radius; dx <= radius; ++dx ) {
+            const tripoint_bub_ms p = center + tripoint_rel_ms( dx, dy, 0 );
+            const map_stack stack = here.i_at( p );
+            for( const item &it : stack ) {
+                json.start_object();
+                json.member( "id", it.typeId().str() );
+                json.member( "pos" );
+                json.start_array();
+                json.write( p.x() );
+                json.write( p.y() );
+                json.write( p.z() );
+                json.end_array();
+                json.member( "count", it.count() );
+                json.end_object();
+            }
+        }
+    }
+    json.end_array();
+
+    // Rendered widget text (`--widget-dump`): the sidebar is a widget, and a clause whose
+    // condition never holds simply draws nothing -- its JSON still loads cleanly and nothing
+    // in the log mentions it.  Rendering the widget is the only way to see whether a line the
+    // mod added actually appears.
+    if( !widget_dump_ids.empty() ) {
+        json.member( "widgets" );
+        json.start_object();
+        for( const std::string &want : widget_dump_ids ) {
+            json.member( want );
+            json.start_object();
+            const widget_id wid( want );
+            if( !wid.is_valid() ) {
+                json.member( "error", "unknown widget id" );
+            } else {
+                // layout() is non-const while the widget factory hands out a const reference,
+                // so render a copy.  Width matters: a clause can also vanish for lack of room.
+                widget w = wid.obj();
+                const std::string rendered = w.layout( you, 120 );
+                json.member( "text", rendered );
+            }
+            json.end_object();
+        }
+        json.end_object();
+    }
+
+    json.end_object();
+}
+
+void game::set_widget_dump_ids( const std::vector<std::string> &ids )
+{
+    widget_dump_ids = ids;
+}
+
+// "1" reads better than "1.000000" in the applied list, and is what the engine actually stores.
+static std::string describe_patch_number( double value )
+{
+    if( value == static_cast<double>( static_cast<long long>( value ) ) ) {
+        return string_format( "%lld", static_cast<long long>( value ) );
+    }
+    return string_format( "%g", value );
+}
+
+// Does this string look like something the caller meant as a number?  Used to warn about the
+// one remaining silent type trap: a quoted number is stored as text, and the math parser then
+// refuses it ("requested double, got string") somewhere far away, in the mod under test.
+static bool looks_like_a_number( const std::string &text )
+{
+    if( text.empty() ) {
+        return false;
+    }
+    char *end = nullptr;
+    std::strtod( text.c_str(), &end );
+    return end != nullptr && *end == '\0' && end != text.c_str();
+}
+
+void game::apply_var_patch( const std::string &patch_path )
+{
+    // The `--var-patch` seam: put a character into a state from JSON instead of playing them
+    // into it.  That is the fixture half of the harness -- "at realm 9", "carrying the old
+    // scroll id", "mid-breakthrough" -- and it is what makes a migration or a realm-gated flow
+    // testable at all.  Sibling of apply_pocket_patch() with the same rules: it reports what it
+    // applied next to the patch and never throws out to its caller.
+    avatar &you = get_avatar();
+    const cata_path result_path =
+        PATH_INFO::world_base_save_path() / "mcp_var_patch.result.json";
+    std::vector<std::string> applied;
+    std::vector<std::string> failed;
+    std::vector<std::string> notes;
+
+    try {
+        JsonValue jv = json_loader::from_path(
+                           cata_path( cata_path::root_path::unknown, patch_path ) );
+        const JsonObject root = jv.get_object();
+
+        if( root.has_member( "values" ) ) {
+            for( const JsonMember m : root.get_object( "values" ) ) {
+                const std::string name = m.name();
+                if( m.test_string() ) {
+                    const std::string text = m.get_string();
+                    you.set_value( name, text );
+                    applied.emplace_back( "value " + name + "=" + text + " (string)" );
+                    if( looks_like_a_number( text ) ) {
+                        notes.emplace_back( "values." + name + " was written as a string (\""
+                                            + text + "\"); pass it as a JSON number if anything "
+                                            "compares it numerically" );
+                    }
+                } else if( m.test_number() ) {
+                    // A JSON number must land in the *numeric* store.  set_value() is overloaded
+                    // on a variant, and the string form is never coerced later: the math parser
+                    // raises "Type mismatch ... requested double, got string" as soon as the
+                    // value is compared.  Formatting it with "%.6f" through the string overload
+                    // is exactly what stopped a patched number from driving any numeric logic
+                    // (realm thresholds, bottleneck conditions, counter comparisons).  This is
+                    // the same setter condition.cpp uses for `u_x = 4321`, so the value is
+                    // stored and saved like any in-game assignment.
+                    const double num = m.get_float();
+                    you.set_value( name, num );
+                    applied.emplace_back( "value " + name + "=" + describe_patch_number( num )
+                                          + " (number)" );
+                } else {
+                    failed.emplace_back( "values." + name + ": expected a string or number" );
+                    continue;
+                }
+            }
+        }
+        if( root.has_member( "traits" ) ) {
+            for( const JsonValue v : root.get_array( "traits" ) ) {
+                const trait_id tid( v.get_string() );
+                if( !tid.is_valid() ) {
+                    failed.emplace_back( "trait " + tid.str() + ": unknown id" );
+                    continue;
+                }
+                you.set_mutation( tid );
+                applied.emplace_back( "trait " + tid.str() );
+            }
+        }
+        if( root.has_member( "remove_traits" ) ) {
+            // "A character who does not have X" is half of every negative fixture, and a fresh
+            // character always gets what the opening dialogue grants -- so adding is not enough.
+            for( const JsonValue v : root.get_array( "remove_traits" ) ) {
+                const trait_id tid( v.get_string() );
+                if( !tid.is_valid() ) {
+                    failed.emplace_back( "remove_trait " + tid.str() + ": unknown id" );
+                    continue;
+                }
+                if( you.has_trait( tid ) ) {
+                    you.unset_mutation( tid );
+                    applied.emplace_back( "remove_trait " + tid.str() );
+                } else {
+                    // Not a failure: asking for the absence of a trait the character never had
+                    // is a legitimate fixture, it just had nothing to do.
+                    notes.emplace_back( "remove_traits: the character did not have " + tid.str() );
+                }
+            }
+        }
+        if( root.has_member( "proficiencies" ) ) {
+            for( const JsonValue v : root.get_array( "proficiencies" ) ) {
+                const proficiency_id pid( v.get_string() );
+                if( !pid.is_valid() ) {
+                    failed.emplace_back( "proficiency " + pid.str() + ": unknown id" );
+                    continue;
+                }
+                // ignore_requirements: a fixture states the state, it does not roleplay into it
+                you.add_proficiency( pid, true );
+                applied.emplace_back( "proficiency " + pid.str() );
+            }
+        }
+        if( root.has_member( "skills" ) ) {
+            for( const JsonMember m : root.get_object( "skills" ) ) {
+                const skill_id sid( m.name() );
+                if( !sid.is_valid() ) {
+                    failed.emplace_back( "skill " + m.name() + ": unknown id" );
+                    continue;
+                }
+                you.set_skill_level( sid, m.get_int() );
+                applied.emplace_back( "skill " + m.name() + "=" +
+                                      std::to_string( m.get_int() ) );
+            }
+        }
+        if( root.has_member( "effects" ) ) {
+            for( const JsonValue v : root.get_array( "effects" ) ) {
+                const JsonObject e = v.get_object();
+                const efftype_id eid( e.get_string( "id" ) );
+                if( !eid.is_valid() ) {
+                    failed.emplace_back( "effect " + eid.str() + ": unknown id" );
+                    continue;
+                }
+                you.add_effect( eid, time_duration::from_turns( e.get_int( "turns", 1 ) ) );
+                applied.emplace_back( "effect " + eid.str() );
+            }
+        }
+        if( root.has_member( "remove_effects" ) ) {
+            for( const JsonValue v : root.get_array( "remove_effects" ) ) {
+                const efftype_id eid( v.get_string() );
+                if( !eid.is_valid() ) {
+                    failed.emplace_back( "remove_effect " + eid.str() + ": unknown id" );
+                    continue;
+                }
+                if( you.has_effect( eid ) ) {
+                    you.remove_effect( eid );
+                    applied.emplace_back( "remove_effect " + eid.str() );
+                } else {
+                    notes.emplace_back( "remove_effects: the character did not have " + eid.str() );
+                }
+            }
+        }
+        if( root.has_member( "vitamins" ) ) {
+            for( const JsonMember m : root.get_object( "vitamins" ) ) {
+                const vitamin_id vid( m.name() );
+                if( !vid.is_valid() ) {
+                    failed.emplace_back( "vitamin " + m.name() + ": unknown id" );
+                    continue;
+                }
+                you.vitamin_set( vid, m.get_int() );
+                applied.emplace_back( "vitamin " + m.name() + "=" +
+                                      std::to_string( m.get_int() ) );
+            }
+        }
+    } catch( const std::exception &err ) {
+        failed.emplace_back( std::string( "parse: " ) + err.what() );
+    }
+
+    // Report next to the patch, so a run can assert on what actually happened rather than
+    // assuming the fixture landed.
+    try {
+        std::ofstream fout( result_path.get_unrelative_path(), std::ios::trunc );
+        if( fout.is_open() ) {
+            JsonOut jsout( fout );
+            jsout.start_object();
+            jsout.member( "applied", applied );
+            jsout.member( "failed", failed );
+            jsout.member( "notes", notes );
+            jsout.end_object();
+        }
+    } catch( const std::exception & ) {
+        // reporting is best effort; the character state is what matters
+    }
+}
+
+void game::apply_pocket_patch( const std::string &patch_path )
+{
+    // Pocket settings are normally only reachable through the pocket-settings UI;
+    // this lets automation set them straight from a JSON file (matched by worn item
+    // type id + pocket index) and records what happened next to it.
+    const cata_path result_path =
+        PATH_INFO::world_base_save_path() / "mcp_pocket_patch.result.json";
+    std::vector<std::string> applied;
+    std::vector<std::string> failed;
+
+    try {
+        JsonValue jv = json_loader::from_path(
+                           cata_path( cata_path::root_path::unknown, patch_path ) );
+        for( JsonObject entry : jv.get_array() ) {
+            const std::string want_id = entry.get_string( "item" );
+            const int want_idx = entry.get_int( "pocket", 0 );
+            bool matched = false;
+            for( item_location &loc : get_avatar().top_items_loc() ) {
+                if( !loc ) {
+                    continue;
+                }
+                item &obj = *loc;
+                if( obj.typeId().str() != want_id ) {
+                    continue;
+                }
+                std::vector<item_pocket *> pockets = obj.get_contents().get_standard_pockets();
+                if( want_idx < 0 || want_idx >= static_cast<int>( pockets.size() ) ) {
+                    continue;
+                }
+                item_pocket::favorite_settings &settings = pockets[want_idx]->settings;
+                for( const std::string &id : entry.get_string_array( "whitelist" ) ) {
+                    settings.whitelist_item( itype_id( id ) );
+                }
+                for( const std::string &id : entry.get_string_array( "blacklist" ) ) {
+                    settings.blacklist_item( itype_id( id ) );
+                }
+                if( entry.has_int( "priority" ) ) {
+                    settings.set_priority( entry.get_int( "priority" ) );
+                }
+                if( entry.has_bool( "disabled" ) ) {
+                    settings.set_disabled( entry.get_bool( "disabled" ) );
+                }
+                settings.set_was_edited();
+                matched = true;
+            }
+            ( matched ? applied : failed ).push_back(
+                string_format( "%s[%d]", want_id, want_idx ) );
+        }
+    } catch( const std::exception &err ) {
+        debugmsg( "pocket patch: cannot read %s: %s", patch_path, err.what() );
+        return;
+    }
+
+    std::ofstream fout( result_path.get_unrelative_path(), std::ios::trunc );
+    if( fout.is_open() ) {
+        JsonOut json( fout );
+        json.start_object();
+        json.member( "ok", failed.empty() );
+        json.member( "applied", applied );
+        json.member( "not_applied", failed );
+        json.end_object();
+    }
+}
 
 void game::list_surroundings()
 {

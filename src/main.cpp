@@ -35,11 +35,16 @@
 #include "cata_allocator.h"
 #include "cata_path.h"
 #include "color.h"
+#include "avatar.h"
 #include "compatibility.h"
 #include "crash.h"
 #include "cursesdef.h"
 #include "debug.h"
+#include "dialogue.h"
+#include "effect_on_condition.h"
+#include "talker.h"
 #include "do_turn.h"
+#include "enums.h"
 #include "event.h"
 #include "event_bus.h"
 #include "filesystem.h"
@@ -50,6 +55,7 @@
 #include "help.h"
 #include "input.h"
 #include "main_menu.h"
+#include "npctalk.h"
 #include "mapsharing.h"
 #include "memory_fast.h"
 #include "options.h"
@@ -61,6 +67,7 @@
 #include "translations.h"
 #include "type_id.h"
 #include "ui_manager.h"
+#include "worldfactory.h"
 #include "cata_imgui.h"
 #if defined(MACOSX) || defined(__CYGWIN__)
 #   include <unistd.h> // getpid()
@@ -279,6 +286,20 @@ struct cli_opts {
     bool check_mods = false;
     std::vector<std::string> opts;
     std::string world; /** if set try to load first save in this world on startup */
+    std::string save_id; /** with --world, load this specific save instead of the first */
+    std::string input_script; /** queue the keys in this file at startup */
+    bool dismiss_debug_prompts = false; /** log debugmsgs without their blocking prompts */
+    bool dialogue_dump = false; /** write every generated talk topic to mcp_dialogue.json */
+    bool selector_dump = false; /** write every run_eoc_selector menu to mcp_selector.json */
+    std::string pocket_patch; /** apply this JSON pocket-settings patch after loading */
+    std::string var_patch; /** apply this JSON character-state patch after loading */
+    std::string selector_run; /** run this selector EOC after loading, for its dump only */
+    std::string eoc_run; /** run this EOC after loading, for its effects */
+    int advance_turns = 0; /** pass this many real game turns before the snapshot */
+    std::string advance_key = "."; /** the key that ends a turn ('.' = the shipped `pause` binding; `wait` is '|' and opens a menu, which would stall) */
+    std::vector<std::string> widget_dump; /** render these widget ids into the snapshot */
+    bool new_character = false; /** create a character non-interactively and start */
+    bool snapshot = false; /** write a situation snapshot on the first turn */
     bool disable_ascii_art = false;
 };
 
@@ -344,6 +365,161 @@ cli_opts parse_commandline( int argc, const char **argv )
                 1,
                 [&result]( int, const char **params ) -> int {
                     result.world = params[0];
+                    return 1;
+                }
+            },
+            {
+                "--save", "<save id>",
+                "With --world, load this specific save (character) instead of the first",
+                section_default,
+                1,
+                [&result]( int, const char **params ) -> int {
+                    result.save_id = params[0];
+                    return 1;
+                }
+            },
+            {
+                "--new-character", {},
+                "Create a character non-interactively in the --world world and start playing",
+                section_default,
+                0,
+                [&result]( int, const char ** ) -> int {
+                    result.new_character = true;
+                    return 0;
+                }
+            },
+            {
+                "--input-script", "<path>",
+                "Queue key presses from a script file (one key name per line) at startup",
+                section_default,
+                1,
+                [&result]( int, const char **params ) -> int {
+                    result.input_script = params[0];
+                    return 1;
+                }
+            },
+            {
+                "--dismiss-debug-prompts", {},
+                "Write debug messages to the log without showing their blocking prompts (automation)",
+                section_default,
+                0,
+                [&result]( int, const char ** ) -> int {
+                    result.dismiss_debug_prompts = true;
+                    return 0;
+                }
+            },
+            {
+                "--dialogue-dump", {},
+                "Write every generated talk topic (line, shown responses + silently dropped ones) to <world>/mcp_dialogue.json",
+                section_default,
+                0,
+                [&result]( int, const char ** ) -> int {
+                    result.dialogue_dump = true;
+                    return 0;
+                }
+            },
+            {
+                "--selector-dump", {},
+                "Write every run_eoc_selector menu (title, options, which are selectable or hidden) to <world>/mcp_selector.json",
+                section_default,
+                0,
+                [&result]( int, const char ** ) -> int {
+                    result.selector_dump = true;
+                    return 0;
+                }
+            },
+            {
+                "--selector-run", "<effect_on_condition id>",
+                "Run this selector EOC after loading and write its menu to <world>/mcp_selector.json WITHOUT showing it (no cursor, nothing chosen)",
+                section_default,
+                1,
+                [&result]( int, const char **params ) -> int {
+                    result.selector_run = params[0];
+                    return 1;
+                }
+            },
+            {
+                "--eoc-run", "<effect_on_condition id>",
+                "Run this EOC after loading, for its effects (no UI, no trigger). Writes <world>/mcp_eoc.run.json",
+                section_default,
+                1,
+                [&result]( int, const char **params ) -> int {
+                    result.eoc_run = params[0];
+                    return 1;
+                }
+            },
+            {
+                "--advance-turns", "<n>",
+                "Pass this many real game turns (the wait key, run headlessly) before the snapshot, so per-hour mechanics can be observed",
+                section_default,
+                1,
+                [&result]( int, const char **params ) -> int {
+                    result.advance_turns = std::max( 0, atoi( params[0] ) );
+                    return 1;
+                }
+            },
+            {
+                "--advance-key", "<key>",
+                "The key that ends a turn (default '.', the shipped `pause` binding; `wait` is '|' "
+                "and opens a menu, which would stall)",
+                section_default,
+                1,
+                [&result]( int, const char **params ) -> int {
+                    result.advance_key = params[0];
+                    return 1;
+                }
+            },
+            {
+                "--snapshot", {},
+                "Write a situation snapshot (mcp_snapshot.json) on the first turn",
+                section_default,
+                0,
+                [&result]( int, const char ** ) -> int {
+                    result.snapshot = true;
+                    return 0;
+                }
+            },
+            {
+                "--pocket-patch", "<path>",
+                "Apply a JSON pocket-settings patch to worn items once the game is loaded",
+                section_default,
+                1,
+                [&result]( int, const char **params ) -> int {
+                    result.pocket_patch = params[0];
+                    return 1;
+                }
+            },
+            {
+                "--var-patch", "<path>",
+                "Apply a JSON character-state patch (values, traits, proficiencies, skills, effects, vitamins) once the game is loaded",
+                section_default,
+                1,
+                [&result]( int, const char **params ) -> int {
+                    result.var_patch = params[0];
+                    return 1;
+                }
+            },
+            {
+                "--widget-dump", "<comma-separated widget ids>",
+                "Render these widgets to text inside the --snapshot (e.g. structured_sidebar)",
+                section_default,
+                1,
+                [&result]( int, const char **params ) -> int {
+                    std::string ids( params[0] );
+                    std::string cur;
+                    for( const char c : ids ) {
+                        if( c == ',' ) {
+                            if( !cur.empty() ) {
+                                result.widget_dump.emplace_back( cur );
+                                cur.clear();
+                            }
+                        } else if( c != ' ' ) {
+                            cur += c;
+                        }
+                    }
+                    if( !cur.empty() ) {
+                        result.widget_dump.emplace_back( cur );
+                    }
                     return 1;
                 }
             },
@@ -868,15 +1044,210 @@ void select_initial_language()
 #endif
 }
 
+// Queue a scripted key sequence: one key name per line, '#' comments and blank lines
+// ignored.  Keys are resolved with the game's own keycode tables *for the active keyboard
+// mode*, so "F9", "j" and "RETURN" all work and look like real keypresses.  The queue is
+// served by input_manager::get_input_event() ahead of real input, which makes a driven run
+// reproducible.
+static void load_input_script( const std::string &path )
+{
+    std::ifstream fin( path );
+    if( !fin.is_open() ) {
+        debugmsg( "input script: cannot read %s", path );
+        return;
+    }
+    std::vector<std::string> keys;
+    std::string line;
+    while( std::getline( fin, line ) ) {
+        while( !line.empty() && ( line.back() == '\r' || line.back() == ' ' ||
+                                  line.back() == '\t' ) ) {
+            line.pop_back();
+        }
+        const size_t start = line.find_first_not_of( " \t" );
+        if( start == std::string::npos || line[start] == '#' ) {
+            continue;
+        }
+        line = line.substr( start );
+        // Keep the *name*: input_manager resolves it per keyboard mode, so a scripted key
+        // looks like a real keypress wherever it is consumed.
+        keys.push_back( line );
+    }
+    if( !keys.empty() ) {
+        inp_mngr.inject_input_events( keys );
+    }
+}
+
+// The advance record, rewritten at every step.  A turn that blocks never returns here, so a single
+// end-of-loop write would leave a hang indistinguishable from a run that never started advancing.
+static void write_advance_record( const cli_opts &cli, int turn_before, const std::string &phase )
+{
+    try {
+        const cata_path out = PATH_INFO::world_base_save_path() / "mcp_advance.result.json";
+        std::ofstream fout( out.get_unrelative_path(), std::ios::trunc );
+        if( fout.is_open() ) {
+            const int advanced = to_turn<int>( calendar::turn ) - turn_before;
+            JsonOut jout( fout );
+            jout.start_object();
+            jout.member( "requested", cli.advance_turns );
+            jout.member( "turns", advanced );
+            jout.member( "keys_left", inp_mngr.injected_input_remaining() );
+            jout.member( "phase", phase );
+            // Only meaningful once the loop is done; mid-turn, fewer turns than requested just means
+            // the rest are still to come.
+            jout.member( "stopped_early", phase == "done" && advanced < cli.advance_turns );
+            jout.end_object();
+        }
+    } catch( const std::exception & ) {
+        // diagnostics are best effort
+    }
+}
+
+// A marker written whenever a seam is *reached*, so a missing dump can be told apart from "the hook
+// never ran" (a UI blocked the load first) -- those read very differently.
+static void write_eoc_marker( const std::string &filename, const std::string &eoc_id, bool valid )
+{
+    try {
+        const cata_path marker = PATH_INFO::world_base_save_path() / filename;
+        std::ofstream mout( marker.get_unrelative_path(), std::ios::trunc );
+        if( mout.is_open() ) {
+            JsonOut mjout( mout );
+            mjout.start_object();
+            mjout.member( "eoc", eoc_id );
+            mjout.member( "valid", valid );
+            mjout.end_object();
+        }
+    } catch( const std::exception & ) {
+        // diagnostics are best effort
+    }
+}
+
+// Run one EOC by id, for its dump or its effects, marking that the hook was reached.
+static void run_startup_eoc( const std::string &eoc_id, const std::string &marker_name,
+                             const std::string &label )
+{
+    const effect_on_condition_id eoc( eoc_id );
+    const bool valid = eoc.is_valid();
+    write_eoc_marker( marker_name, eoc_id, valid );
+    if( valid ) {
+        dialogue d( get_talker_for( get_avatar() ), nullptr );
+        eoc->activate( d );
+    } else {
+        debugmsg( "%s: no effect_on_condition with id '%s'", label, eoc_id );
+    }
+}
+
+// Startup seams: the fixtures and observations the harness applies once the avatar exists and
+// before the turn loop runs.  Shared by both entry points (--new-character and a load) so the two
+// cannot drift -- a difference between them is a difference in what the harness measures.
+static void apply_startup_seams( const cli_opts &cli )
+{
+    if( !cli.pocket_patch.empty() ) {
+        g->apply_pocket_patch( cli.pocket_patch );
+    }
+    if( !cli.var_patch.empty() ) {
+        g->apply_var_patch( cli.var_patch );
+    }
+    if( !cli.widget_dump.empty() ) {
+        g->set_widget_dump_ids( cli.widget_dump );
+    }
+    if( !cli.selector_run.empty() ) {
+        // Run a selector EOC for its dump alone.  This is the only deterministic way to see a menu
+        // that is normally reached by activating a mutation: the mutation list sorts by id, and
+        // RETURN activates the *selected* entry, so a key script cannot pick one.
+        set_selector_dry_run( true );
+        set_selector_dump_enabled( true );
+        run_startup_eoc( cli.selector_run, "mcp_selector.run.json", "selector-run" );
+    }
+    if( !cli.eoc_run.empty() ) {
+        // Run any EOC for its effects, with no UI and no trigger: --selector-run generalised, so a
+        // scenario can test an EOC's effect without the screen that normally opens it.
+        run_startup_eoc( cli.eoc_run, "mcp_eoc.run.json", "eoc-run" );
+    }
+    // The selector dry run is for the startup hook alone.  Leaving it armed would make every later
+    // selector in this process return early without showing a menu -- a silent no-op that reads
+    // like a mod bug rather than a seam one.
+    set_selector_dry_run( false );
+    set_selector_dump_enabled( false );
+
+    if( cli.advance_turns > 0 ) {
+        // Pass real game turns the way a player waiting does: queue the key that ends a turn and run
+        // the turn loop, once per turn.  A calendar jump would not accrue anything (rates are per
+        // turn), and an in-game key is no substitute -- too slow, and a script's keys get eaten by
+        // the load.  This is what makes a per-hour mechanic assertable.
+        //
+        // BOUNDED BY THE QUEUE, NOT BY THE COUNT.  do_turn() blocks when nothing answers it, so if
+        // the keys were consumed elsewhere -- a modal on screen, usually -- advancing anyway would
+        // hang the process inside this hook.  Stop when the queue is empty, and record how far it
+        // got so the caller can be told rather than left guessing.
+        const int turn_before = to_turn<int>( calendar::turn );
+        inp_mngr.inject_input_events( std::vector<std::string>(
+                                          static_cast<size_t>( cli.advance_turns ), cli.advance_key ) );
+        write_advance_record( cli, turn_before, "before-first-turn" );
+        for( int i = 0; i < cli.advance_turns; i++ ) {
+            if( inp_mngr.injected_input_remaining() <= 0 ) {
+                // The queue is dry: something ate the keys and a further do_turn() would block with
+                // nothing to answer it.  Stop, and let the record say where.
+                //
+                // This cannot rescue a turn that is already blocked *inside* do_turn() -- a modal
+                // that owns the UI does that, which is why a save that loads into a menu is not a
+                // candidate for --advance-turns until that menu is answered.
+                break;
+            }
+            write_advance_record( cli, turn_before, "in-turn-" + std::to_string( i ) );
+            if( g->do_turn() ) {
+                break;
+            }
+        }
+        write_advance_record( cli, turn_before, "done" );
+    }
+    if( cli.snapshot ) {
+        g->request_snapshot();
+    }
+}
+
 void run_game_loop( cli_opts &cli )
 {
     main_menu::queued_world_to_load = std::move( cli.world );
+    main_menu::queued_save_id_to_load = std::move( cli.save_id );
+
+    // NOTE: the input script is already queued in main(), before data loading, so that it
+    // can also answer the buffered debugmsg prompts replayed during startup.
+
+    if( cli.new_character ) {
+        // Non-interactive character creation: this is what automation uses instead of
+        // driving the main menu (and it skips world selection entirely).
+        // NOTE: the world factory is only initialised inside main_menu::opening_screen()
+        // normally, and we are deliberately skipping that, so do it here.
+        world_generator->init();
+        WORLD *w = world_generator->get_world( main_menu::queued_world_to_load );
+        if( w == nullptr ) {
+            debugmsg( "--new-character needs --world (no world named '%s')",
+                      main_menu::queued_world_to_load );
+            return;
+        }
+        world_generator->set_active_world( w );
+        if( !g->start_new_character() ) {
+            return;
+        }
+        apply_startup_seams( cli );
+
+        // The same tail as the load path below, deliberately: a new character is also a game
+        // beginning.  Without this send, the EOCs that base-game content and the mod under test
+        // hang off event_type::game_begin never fire on this path -- so a harness would measure
+        // different things depending on which entrance it used.
+        shared_ptr_fast<ui_adaptor> ui = g->create_or_get_main_ui_adaptor();
+        get_event_bus().send<event_type::game_begin>( getVersionString() );
+        while( !g->do_turn() ) {}
+        return;
+    }
 
     while( true ) {
         main_menu menu;
         if( !menu.opening_screen() ) {
             break;
         }
+
+        apply_startup_seams( cli );
 
         shared_ptr_fast<ui_adaptor> ui = g->create_or_get_main_ui_adaptor();
         get_event_bus().send<event_type::game_begin>( getVersionString() );
@@ -916,6 +1287,29 @@ int main( int argc, const char *argv[] )
     MAP_SHARING::setDefaults();
 
     cli_opts cli = parse_commandline( argc, const_cast<const char **>( argv ) );
+
+    // Queue scripted keys as early as possible: data loading buffers its debugmsg prompts
+    // and replays them during startup, and each prompt blocks until a key arrives, so a
+    // script queued later can never answer them and the run stalls on the prompt instead of
+    // playing.  input_manager::inject_input_events() makes sure the keycode tables the keys
+    // resolve against exist even this early.
+    if( !cli.input_script.empty() ) {
+        load_input_script( cli.input_script );
+    }
+
+    // An unattended run must not block on a developer-facing prompt.  Data loading buffers
+    // debugmsg prompts (a duplicate mod id, a JSON error in data/mods, ...) and replays them
+    // during startup; each one waits for a key, which would stall the run before it plays.
+    // The reports still reach the debug log, where cdda_tail_debug can read them.
+    if( cli.dismiss_debug_prompts ) {
+        set_debug_prompts_auto_dismiss( true );
+    }
+    if( cli.dialogue_dump ) {
+        set_dialogue_dump_enabled( true );
+    }
+    if( cli.selector_dump ) {
+        set_selector_dump_enabled( true );
+    }
 
     validate_directories();
     initialize_debugging();

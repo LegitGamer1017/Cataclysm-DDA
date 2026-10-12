@@ -707,6 +707,13 @@ input_event input_manager::get_input_event( const keyboard_mode /*preferred_keyb
         throw std::runtime_error( "input_manager::get_input_event called in test mode" );
     }
 
+    // Scripted input (--input-script) is served before any real input.  This front-end has
+    // no raw keycode, so actual_keyboard_mode() degrades to keychar and keys stay chars.
+    input_event injected = pop_injected_event( keyboard_mode::keycode );
+    if( injected.type != input_event_t::error ) {
+        return injected;
+    }
+
     // standards note: getch is sometimes required to call refresh
     // see, e.g., http://linux.die.net/man/3/getch
     // so although it's non-obvious, that refresh() call (and maybe InvalidateRect?) IS supposed to be there

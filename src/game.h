@@ -821,6 +821,40 @@ class game
         * @returns `true` if the screenshot generation was successful, `false` otherwise.
         */
         bool take_screenshot() const;
+        /** Saves a screenshot to the fixed path `<world>/screenshots/last.png`, with no popup.
+        * @note: Only works for SDL/TILES (otherwise the function returns `false`). Used by
+        * automation (ACTION_TAKE_SCREENSHOT), which needs a stable path and no blocking modal.
+        * @returns `true` if the screenshot generation was successful, `false` otherwise.
+        */
+        bool take_screenshot_quiet() const;
+
+        /** Write a machine-readable "situation" snapshot for automation to
+         *  `<world>/mcp_snapshot.json` (live terrain, creatures and ground items the
+         *  on-disk saves do not carry). */
+        void dump_snapshot();
+        /** Ask for a snapshot on the next turn (the `--snapshot` seam). */
+        void request_snapshot();
+        /** Apply a JSON pocket-settings patch to the avatar's worn items (the
+         *  `--pocket-patch` seam): matches by item type id + pocket index and sets
+         *  whitelist/blacklist/priority/disabled without going through the UI. */
+        void apply_pocket_patch( const std::string &patch_path );
+        /** Put the avatar into a state from JSON (the `--var-patch` seam): character values,
+         *  traits, proficiencies, skills, effects and vitamins.  The fixture half of the
+         *  harness -- a character at realm 9, carrying an old id, mid-breakthrough -- without
+         *  playing them into that state.  Records what it applied next to the patch. */
+        void apply_var_patch( const std::string &patch_path );
+        /** Widget ids whose *rendered text* the snapshot should carry (the `--widget-dump`
+         *  seam).  A widget clause whose condition never holds draws nothing while its JSON
+         *  still loads cleanly, so rendering the widget is the only way to see whether the
+         *  line actually appears — which is what a UI regression assertion needs. */
+        void set_widget_dump_ids( const std::vector<std::string> &ids );
+        /** Widget ids to render into the snapshot (see set_widget_dump_ids). */
+        std::vector<std::string> widget_dump_ids;
+
+        /** Non-interactive new game (the `--new-character` seam).  The active world must
+         *  already be set (world_generator->set_active_world); creates a random character
+         *  and starts the game.  Lives here because setup()/start_game() are private. */
+        bool start_new_character();
 
         /**
          * Load the main map at given location, see @ref map::load, in global, absolute submap
@@ -1245,6 +1279,10 @@ class game
         bool was_fullscreen = false; // NOLINT(cata-serialize)
         bool auto_travel_mode = false;
         bool queue_screenshot = false; // NOLINT(cata-serialize)
+        // Quiet variant (ACTION_TAKE_SCREENSHOT): fixed path, no popup, for automation.
+        bool queue_screenshot_quiet = false; // NOLINT(cata-serialize)
+        // Situation snapshot (ACTION_MCP_SNAPSHOT): writes <world>/mcp_snapshot.json.
+        bool queue_snapshot = false; // NOLINT(cata-serialize)
         safe_mode_type safe_mode;
 
         // tracks time since last monster seen to allow automatically

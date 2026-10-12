@@ -234,6 +234,13 @@ void replay_buffered_debugmsg_prompts();
 std::ostream &DebugLog( DebugLevel, DebugClass );
 
 /**
+ * When set, debug prompts are never shown: the report has already been written to the debug
+ * log by debugmsg(), so an unattended run must not block waiting for someone to press space.
+ * Used by the automation seams (`--dismiss-debug-prompts`).
+ */
+void set_debug_prompts_auto_dismiss( bool value );
+
+/**
  * Extended debugging mode, can be toggled during game.
  * If enabled some debug message in the normal player message log are shown,
  * and other windows might have verbose display (e.g. vehicle window).

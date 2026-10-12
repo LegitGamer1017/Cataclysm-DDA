@@ -232,6 +232,64 @@ void input_manager::init()
     }
 }
 
+void input_manager::inject_input_events( const std::vector<std::string> &key_names )
+{
+    // The script stores key *names*, so the name tables must exist before the game can be
+    // asked to answer a prompt.  A startup debugmsg prompt ("Press space bar to continue")
+    // can request input before input_manager::init() has run, and a name that cannot be
+    // resolved would be served as an empty event that no UI accepts.  init_keycode_mapping()
+    // only fills maps with constant pairs, so calling it here is idempotent.
+    if( keyboard_char_keyname_to_keycode.empty() ) {
+        init_keycode_mapping();
+    }
+    injected_keys.insert( injected_keys.end(), key_names.begin(), key_names.end() );
+}
+
+input_event input_manager::scripted_key_event( const std::string &name,
+        const keyboard_mode mode ) const
+{
+    if( mode == keyboard_mode::keychar ) {
+        return input_event( get_keycode( input_event_t::keyboard_char, name ),
+                            input_event_t::keyboard_char );
+    }
+    // keycode mode: mirror what the SDL front-end produces for this key.  A capital letter
+    // is its lower-case keycode *plus shift* ("S" arrives as SDLK_s+shift, not as code 'S'),
+    // which is what a real keypress of that key looks like.
+    std::string code_name = name;
+    bool shift = false;
+    if( name.size() == 1 && name[0] >= 'A' && name[0] <= 'Z' ) {
+        code_name = std::string( 1, static_cast<char>( name[0] - 'A' + 'a' ) );
+        shift = true;
+    }
+    const int code = get_keycode( input_event_t::keyboard_code, code_name );
+    if( code == 0 ) {
+        // Not addressable as a keycode (e.g. a char-only name such as "CTRL+A"); fall back
+        // to the char form rather than silently dropping the key.
+        return input_event( get_keycode( input_event_t::keyboard_char, name ),
+                            input_event_t::keyboard_char );
+    }
+    input_event evt( code, input_event_t::keyboard_code );
+    if( shift ) {
+        evt.modifiers.emplace( keymod_t::shift );
+    }
+    return evt;
+}
+
+input_event input_manager::pop_injected_event( const keyboard_mode preferred_keyboard_mode )
+{
+    if( injected_cursor >= injected_keys.size() ) {
+        return input_event();
+    }
+    const std::string name = injected_keys[injected_cursor];
+    injected_cursor++;
+    return scripted_key_event( name, actual_keyboard_mode( preferred_keyboard_mode ) );
+}
+
+int input_manager::injected_input_remaining() const
+{
+    return static_cast<int>( injected_keys.size() - injected_cursor );
+}
+
 static constexpr int current_keybinding_version = 2;
 
 void input_manager::load( const cata_path &file_name, bool is_user_preferences )

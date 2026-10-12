@@ -430,6 +430,13 @@ input_event input_manager::get_input_event( const keyboard_mode /*preferred_keyb
         throw std::runtime_error( "input_manager::get_input_event called in test mode" );
     }
 
+    // Scripted input (--input-script) is served before any real input.  Curses has no raw
+    // keycode, so actual_keyboard_mode() degrades to keychar and the keys stay char events.
+    input_event injected = pop_injected_event( keyboard_mode::keycode );
+    if( injected.type != input_event_t::error ) {
+        return injected;
+    }
+
     int key = ERR;
     input_event rval;
     do {
