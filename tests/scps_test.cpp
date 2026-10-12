@@ -32,12 +32,23 @@
 // This file tests the `scps` mod.  `data/mods/cdda-scps` is gitignored in the game repo, so a
 // checkout of the engine alone compiles these cases in and they are inert.
 //
-// DECISION (recorded at the harness's request, 2026-10-11): the absence is made LOUD.
-// Every case below early-returns when the mod is not loaded, so without it the suite reads
-// "37 cases, 0 assertions, all passed" -- a green tick that proves nothing.  `scps_mod_is_loaded`
-// is the tripwire: it is deliberately unguarded and FAILS on any run that does not have `scps`,
-// so a hollow green cannot be read as a pass.  If you are seeing that failure, either clone the mod
-// or deselect the [scps] tag; do not read the run as coverage.
+// HOW ABSENCE IS HANDLED (revised 2026-10-11, second revision -- the harness accepted this).
+//
+// Every case below early-returns when the mod is not loaded, so a run without it reads
+// "38 cases, 0 assertions, all passed" -- a green tick that proves nothing.  `scps_mod_is_loaded`
+// is the tripwire: unguarded, so it FAILS on any run that has `scps` selected but not loaded.
+//
+// The cases also carry the `[.]` hidden tag.  Why that, and why not a skip: `SKIP()` is Catch2
+// 3.3.0+ and this tree vendors 2.13.10 (`tests/catch/catch.hpp` defines CATCH_VERSION_MINOR 13),
+// so a skip-with-reason has no spelling here -- CDDA says as much itself at
+// tests/overmap_test.cpp:802.  The v2 spelling of the same intent is `[.]`: a bare `cata_test.exe`
+// does not RUN these cases, so there is no red tick for tooling to "fix" by deleting cases or
+// loosening assertions, while an explicit `[scps]` spec still selects and runs them -- which is how
+// the harness and the QA gate always invoke this file, and where the tripwire still does its job.
+//
+// If you want coverage of this mod, ask for it by name:
+//     cata_test.exe "[scps]" --mods scps
+// and if that ever reports 0 assertions, do not read the run as a pass.
 // ---------------------------------------------------------------------------------------------
 
 // Content ids introduced by the `scps` mod (SCP-173 / SCP-1499 / SCP-1162).
@@ -260,15 +271,16 @@ static bool scps_loaded()
 }
 
 // The tripwire described in the file header.  Unguarded on purpose: this is the one case that must
-// NOT early-return, so that a checkout without the mod reports a failure instead of a hollow pass
-// with zero assertions in 37 cases.
-TEST_CASE( "scps_mod_is_loaded", "[scps]" )
+// NOT early-return, so that `[scps]` selected without the mod loaded reports a named failure instead
+// of a hollow pass.  It carries the same `[.]` tag as everything else, so a bare run neither shows
+// the red nor hides the fact that nothing was checked.
+TEST_CASE( "scps_mod_is_loaded", "[scps][.]" )
 {
     REQUIRE( scps_loaded() );
     CHECK( itype_scp_1499.is_valid() );
 }
 
-TEST_CASE( "scps_content_is_registered", "[scps]" )
+TEST_CASE( "scps_content_is_registered", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -295,7 +307,7 @@ TEST_CASE( "scps_content_is_registered", "[scps]" )
 // so the core spawns must survive.  A future edit that adds "override": true or
 // renames the group would silently erase the vanilla lab population; this pins
 // the additive behaviour that the mod depends on.
-TEST_CASE( "scps_scp_173_merges_into_lab_spawns", "[scps]" )
+TEST_CASE( "scps_scp_173_merges_into_lab_spawns", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -309,7 +321,7 @@ TEST_CASE( "scps_scp_173_merges_into_lab_spawns", "[scps]" )
 // The SCP-1499 mask drives its dimension mechanic through the SCP_1499 flag:
 // the wear/takeoff events gate on `u_has_worn_with_flag: SCP_1499`.  Dropping
 // the flag from the item would silently break the whole mechanic.
-TEST_CASE( "scps_1499_mask_carries_its_wear_flag", "[scps]" )
+TEST_CASE( "scps_1499_mask_carries_its_wear_flag", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -322,7 +334,7 @@ TEST_CASE( "scps_1499_mask_carries_its_wear_flag", "[scps]" )
 // marks the wearer as displaced.  The full round trip also involves overmap
 // travel and map generation (covered by the data-level cases above); this pins
 // the observable side effect the EOC promises on activation.
-TEST_CASE( "scps_1499_enter_applies_dimension_effect", "[scps]" )
+TEST_CASE( "scps_1499_enter_applies_dimension_effect", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -344,7 +356,7 @@ TEST_CASE( "scps_1499_enter_applies_dimension_effect", "[scps]" )
 // variant, the remnant faction, the sentry class, the starter quest, and its completion EOC.
 // A rename or a broken cross-reference here would silently drop the whole facilities/factions/
 // quests layer, so this pins it.
-TEST_CASE( "scps_foundation_slice_is_registered", "[scps]" )
+TEST_CASE( "scps_foundation_slice_is_registered", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -359,7 +371,7 @@ TEST_CASE( "scps_foundation_slice_is_registered", "[scps]" )
 
 // SCP-494's gloves must register with their flag and the four trade results, and the activation
 // EOC must exist.  A rename or a broken copy-from would silently drop the anomaly.
-TEST_CASE( "scps_494_gloves_and_trades_are_registered", "[scps]" )
+TEST_CASE( "scps_494_gloves_and_trades_are_registered", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -406,7 +418,7 @@ TEST_CASE( "scps_494_gloves_and_trades_are_registered", "[scps]" )
 // SCP-494 must be findable as a rare random find: injected into the science and mutagen-lab loot
 // groups.  A future edit that dropped the injection (or a silent overwrite of the group) would make
 // the gloves unobtainable short of wishing, so this pins it.
-TEST_CASE( "scps_494_spawns_as_rare_lab_loot", "[scps]" )
+TEST_CASE( "scps_494_spawns_as_rare_lab_loot", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -417,7 +429,7 @@ TEST_CASE( "scps_494_spawns_as_rare_lab_loot", "[scps]" )
 
 // SCP-701: the manuscript, its flag, the Hanged King it summons, the madness effect, the recital
 // reward spell, and the performance EOCs must all register when the mod is loaded.
-TEST_CASE( "scps_701_is_registered", "[scps]" )
+TEST_CASE( "scps_701_is_registered", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -434,7 +446,7 @@ TEST_CASE( "scps_701_is_registered", "[scps]" )
 
 // The manuscript must turn up in the world: the library bookcase and household shelf groups carry
 // it, so a copy can be found rather than only wished up.
-TEST_CASE( "scps_701_spawns_in_library_loot", "[scps]" )
+TEST_CASE( "scps_701_spawns_in_library_loot", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -445,7 +457,7 @@ TEST_CASE( "scps_701_spawns_in_library_loot", "[scps]" )
 
 // SCP-745: the luminous highway predator, its trophy head, and its nocturnal pair group must all
 // register when the mod is loaded.
-TEST_CASE( "scps_745_is_registered", "[scps]" )
+TEST_CASE( "scps_745_is_registered", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -459,7 +471,7 @@ TEST_CASE( "scps_745_is_registered", "[scps]" )
 
 // SCP-4059: the hircine predator, the journal, the death caps, the horn, the Chemosh rite, and its
 // EOCs must all register when the mod is loaded.
-TEST_CASE( "scps_4059_is_registered", "[scps]" )
+TEST_CASE( "scps_4059_is_registered", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -480,7 +492,7 @@ TEST_CASE( "scps_4059_is_registered", "[scps]" )
 
 // SCP-3254: the docile cybernetic bear, her juvenile that grows up, the containment file, and the
 // healing aura she casts on her brood must all register.
-TEST_CASE( "scps_3254_is_registered", "[scps]" )
+TEST_CASE( "scps_3254_is_registered", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -502,7 +514,7 @@ TEST_CASE( "scps_3254_is_registered", "[scps]" )
 
 // SCP-287: the powered Viking sword, the phantom it spawns, the headache it leaves, the rout it
 // casts, and its activation EOC must all register, and the barrow must carry the sword.
-TEST_CASE( "scps_287_is_registered", "[scps]" )
+TEST_CASE( "scps_287_is_registered", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -521,7 +533,7 @@ TEST_CASE( "scps_287_is_registered", "[scps]" )
 // (two swings in three) and deals the weapon's own cut damage to the right hand, ignoring gloves
 // (src/melee.cpp:2314-2323) -- on this cut-30 sword that is 30 cut to hand_r.  The handling hazard
 // belongs in the activation EOC, gated on the article's insulated gloves, and nowhere else.
-TEST_CASE( "scps_287_is_not_hurt_when_wielded", "[scps]" )
+TEST_CASE( "scps_287_is_not_hurt_when_wielded", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -548,7 +560,7 @@ TEST_CASE( "scps_287_is_not_hurt_when_wielded", "[scps]" )
 // The activation rides on the charge: a loaded sword fills the world with phantoms, a dead one
 // does nothing at all.  Insulated gloves are worn so the EOC takes its ghost branch rather than
 // the bare-hand shock.
-TEST_CASE( "scps_287_scales_phantoms_with_charge", "[scps]" )
+TEST_CASE( "scps_287_scales_phantoms_with_charge", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -596,7 +608,7 @@ TEST_CASE( "scps_287_scales_phantoms_with_charge", "[scps]" )
 // The cost used to be free for a stack larger than the request -- u_consume_item_sum has an upstream
 // branch that subtracts zero in exactly that case, and paper is charge-counted -- and it could be
 // gathered off the floor or out of a vehicle rather than out of the pack.
-TEST_CASE( "scps_1162_reaching_in_costs_an_item", "[scps]" )
+TEST_CASE( "scps_1162_reaching_in_costs_an_item", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -631,7 +643,7 @@ TEST_CASE( "scps_1162_reaching_in_costs_an_item", "[scps]" )
 // under a full moon.  Neither half had a case, which is how a 48-tile-wide "at the reservoir" gate and
 // a purely decorative night gate both shipped.  The mapgen half is the §7 trap made a regression test:
 // a furniture-only palette char inherits the PREDECESSOR floor unless it maps its own terrain.
-TEST_CASE( "scps_4059_the_rite_is_learned_and_gated", "[scps]" )
+TEST_CASE( "scps_4059_the_rite_is_learned_and_gated", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -681,7 +693,7 @@ TEST_CASE( "scps_4059_the_rite_is_learned_and_gated", "[scps]" )
     CHECK( nw.ter( tripoint_omt_ms{ 5, 20, 0 } ) == ter_id( "t_pit_corpsed" ) );
 }
 
-TEST_CASE( "scps_1884_is_registered", "[scps]" )
+TEST_CASE( "scps_1884_is_registered", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -711,7 +723,7 @@ TEST_CASE( "scps_1884_is_registered", "[scps]" )
 // loop itself is two effects -- a terrain search for the marker tile and a teleport back to it --
 // so if the marker terrain, the far door's EOC, or any of the twenty-one stages' effects and
 // keepsakes fail to load, the hallway stops being a hallway.
-TEST_CASE( "scps_9044_is_registered", "[scps]" )
+TEST_CASE( "scps_9044_is_registered", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -739,7 +751,7 @@ TEST_CASE( "scps_9044_is_registered", "[scps]" )
 // u_location_variable's terrain search returns the nearest matching tile, which is not the same
 // square under every preceding test's map.  Where the player actually ends up relative to the
 // update mapgens' fixed squares is what the transform checks below pin down.
-TEST_CASE( "scps_9044_step_loops_and_transforms", "[scps]" )
+TEST_CASE( "scps_9044_step_loops_and_transforms", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -819,7 +831,7 @@ TEST_CASE( "scps_9044_step_loops_and_transforms", "[scps]" )
 // front door, the chain gate, and no wall anywhere along the column between them.  Doors and
 // gates open; walls do not, so "not a wall" is precisely what makes the escape possible.  This is
 // also the only test of the fence gate: without it the lot is sealed and the SCP is unreachable.
-TEST_CASE( "scps_9044_has_a_way_out", "[scps]" )
+TEST_CASE( "scps_9044_has_a_way_out", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -865,7 +877,7 @@ TEST_CASE( "scps_9044_has_a_way_out", "[scps]" )
 // pays.  The counter keeps climbing, and at twenty-three the door still does not open and the
 // house says nothing at all.  Before this, the reward was the only part of the SCP that no test
 // had ever produced.
-TEST_CASE( "scps_9044_reaches_the_end_once", "[scps]" )
+TEST_CASE( "scps_9044_reaches_the_end_once", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -929,7 +941,7 @@ TEST_CASE( "scps_9044_reaches_the_end_once", "[scps]" )
 // what makes the chain work, so the registration here is not decoration -- if the interface or the
 // stabiliser lose their examine_action, or a find fails to load, the site is a room with a box in
 // it and nothing else.
-TEST_CASE( "scps_8000_is_registered", "[scps]" )
+TEST_CASE( "scps_8000_is_registered", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -955,7 +967,7 @@ TEST_CASE( "scps_8000_is_registered", "[scps]" )
 // something through instead), and past the last entry scanning again is what cracks the machine.
 // The reveals themselves point at real overmap specials, which a test world may not have placed --
 // that is why the assertion is on the counter and not on the located tile.
-TEST_CASE( "scps_8000_seeker_scans_the_chain", "[scps]" )
+TEST_CASE( "scps_8000_seeker_scans_the_chain", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -988,7 +1000,7 @@ TEST_CASE( "scps_8000_seeker_scans_the_chain", "[scps]" )
 // matters more than usual here, because half of Stage 2 lives in a dimension -- if the library
 // layer's terrain or its reading room fail to resolve, the rift sends the player into a world of
 // nothing at all.
-TEST_CASE( "scps_8000_wallace_is_registered", "[scps]" )
+TEST_CASE( "scps_8000_wallace_is_registered", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -1014,7 +1026,7 @@ TEST_CASE( "scps_8000_wallace_is_registered", "[scps]" )
 // is_game_over, mid-turn, with the vitals already at zero, and cancelling the death is the whole
 // of its job.  The avatar is put back on its feet at the end so the case cannot poison the ones
 // that follow it.
-TEST_CASE( "scps_8000_book_pays_for_one_death", "[scps]" )
+TEST_CASE( "scps_8000_book_pays_for_one_death", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -1051,7 +1063,7 @@ TEST_CASE( "scps_8000_book_pays_for_one_death", "[scps]" )
 // The book is a carried item plus a PREVENT_DEATH EOC, and the limiter trait is what makes it a
 // once.  This case proves the wiring the EOC's condition reads: the book exists, carrying it is
 // what the condition checks, and the limiter is a real trait the avatar does not start with.
-TEST_CASE( "scps_8000_book_is_a_carried_lifeline", "[scps]" )
+TEST_CASE( "scps_8000_book_is_a_carried_lifeline", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -1071,7 +1083,7 @@ TEST_CASE( "scps_8000_book_is_a_carried_lifeline", "[scps]" )
 // fire the library is somewhere that cannot be reached -- and no other case here would notice,
 // because every other Stage 2 case checks content rather than travel.  The avatar is left back in
 // the main world, so the case cannot poison the ones after it.
-TEST_CASE( "scps_8000_rift_actually_travels", "[scps]" )
+TEST_CASE( "scps_8000_rift_actually_travels", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -1101,7 +1113,7 @@ TEST_CASE( "scps_8000_rift_actually_travels", "[scps]" )
 // levels of one of them, so what is worth checking is that the pieces carrying the mechanic exist
 // at all -- the mist that hides the drop, the lamp that makes the tower a lighthouse, the headstones
 // and the memorial that name the island, and the keeper standing in the middle of it.
-TEST_CASE( "scps_8001_is_registered", "[scps]" )
+TEST_CASE( "scps_8001_is_registered", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -1144,7 +1156,7 @@ TEST_CASE( "scps_8001_is_registered", "[scps]" )
 // rail.  A field with a half_life would thin out and clear an hour into a run, so the claims worth
 // testing are that this one never ages, that it renews itself out of fd_fog rather than decaying
 // away, and that it is opaque, because a transparent field would leave the drop in plain sight.
-TEST_CASE( "scps_8001_the_spray_never_clears", "[scps]" )
+TEST_CASE( "scps_8001_the_spray_never_clears", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -1167,7 +1179,7 @@ TEST_CASE( "scps_8001_the_spray_never_clears", "[scps]" )
 // The tower is a lighthouse before it is anything else, and core's own lighthouse light emits no
 // light at all -- it is scenery.  240 is the practical ceiling: the light cache is one reality
 // bubble across, so a bigger number buys nothing the player can actually see.
-TEST_CASE( "scps_8001_the_lamp_is_the_light", "[scps]" )
+TEST_CASE( "scps_8001_the_lamp_is_the_light", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -1179,7 +1191,7 @@ TEST_CASE( "scps_8001_the_lamp_is_the_light", "[scps]" )
 // Aurélie is the fifth thing in this mod that would rather talk than fight, after the bear, Luana,
 // Spaghetti Jones and Wallace.  Her conversation is her content: strip the topics and she is a piece
 // of clockwork scenery standing in a library, which is a different and much smaller story.
-TEST_CASE( "scps_8001_aurelie_would_rather_talk", "[scps]" )
+TEST_CASE( "scps_8001_aurelie_would_rather_talk", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -1192,7 +1204,7 @@ TEST_CASE( "scps_8001_aurelie_would_rather_talk", "[scps]" )
 // makes the island an eleventh catalogue entry and pushes the machine's collapse one scan further
 // out.  The counter is what every branch of the chain reads, so it is what this drives -- the
 // reveal itself points at a special a test world may never have placed.
-TEST_CASE( "scps_8001_seeker_knows_about_the_edge", "[scps]" )
+TEST_CASE( "scps_8001_seeker_knows_about_the_edge", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -1214,7 +1226,7 @@ TEST_CASE( "scps_8001_seeker_knows_about_the_edge", "[scps]" )
 // `transform_item` wants an item context that a bare dialogue does not have, so what this proves is
 // that the effect chain executes and resolves -- the reveal half is covered by the loader and by the
 // SEEKER case above.
-TEST_CASE( "scps_8001_the_chart_can_be_studied", "[scps]" )
+TEST_CASE( "scps_8001_the_chart_can_be_studied", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -1236,7 +1248,7 @@ TEST_CASE( "scps_8001_the_chart_can_be_studied", "[scps]" )
 // request becomes unanswerable, and nothing else in the mod would notice -- so this is the guard
 // that the offer can still be completed at all.  (The response itself is dialogue, which a test
 // cannot drive; those three ids plus the two things she hands back are what is checkable.)
-TEST_CASE( "scps_8001_aurelie_can_still_be_answered", "[scps]" )
+TEST_CASE( "scps_8001_aurelie_can_still_be_answered", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -1254,7 +1266,7 @@ TEST_CASE( "scps_8001_aurelie_can_still_be_answered", "[scps]" )
 // map.  The island itself is a 4x3 multi-tile mapgen whose tiles the loader already proves have
 // mapgen; this is the floor the beam actually comes off.  (The mapgen is written for the tower's
 // first floor and is run here at z0 purely to read its content back.)
-TEST_CASE( "scps_8001_the_lamp_room_generates", "[scps]" )
+TEST_CASE( "scps_8001_the_lamp_room_generates", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
@@ -1287,7 +1299,7 @@ TEST_CASE( "scps_8001_the_lamp_room_generates", "[scps]" )
 // thing no loader check can tell you.  Forcing the overmap terrain before generating matters: the
 // mapgen picks its slice from the terrain `mapgendata` was built against, so it has to be the tile
 // we mean.  Runs at the player's position + 24 so it cannot collide with anything else in the suite.
-TEST_CASE( "scps_8001_the_island_generates_and_the_walkway_ends_over_a_drop", "[scps]" )
+TEST_CASE( "scps_8001_the_island_generates_and_the_walkway_ends_over_a_drop", "[scps][.]" )
 {
     if( !scps_loaded() ) {
         return;
