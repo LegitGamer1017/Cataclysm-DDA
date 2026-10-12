@@ -4084,6 +4084,8 @@ class Character : public Creature, public visitable
         item &best_unreserved_item_with_quality( const quality_id &qid );
         int max_quality( const quality_id &qual ) const override;
         int max_quality( const quality_id &qual, int radius ) const;
+        VisitResponse visit_carried( const std::function<VisitResponse( const item_location & )> &func )
+        const;
         VisitResponse visit_items( const std::function<VisitResponse( const item_location & )> &func ) const
         override;
         std::list<item> remove_items_with( const std::function<bool( const item & )> &filter,
@@ -4278,6 +4280,8 @@ class Character : public Creature, public visitable
         std::map<vitamin_id, std::pair<int, int>> daily_vitamins;
         /** Returns the % of your RDA that amount of vitamin represents */
         int vitamin_RDA( const vitamin_id &vitamin, int amount ) const;
+
+        bool has_wounds( const bodypart_str_id &part ) const;
 
         pimpl<player_morale> morale;
         /** Processes human-specific effects of an effect. */
