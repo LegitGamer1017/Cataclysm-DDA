@@ -65,5 +65,14 @@
     "attitude": 1,
     "mission": "SHOPKEEP",
     "chat": "TALK_TEST_START"
+  },
+  {
+    "type": "npc",
+    "id": "test_npc_template_vars",
+    "class": "test_npc_trader_class",
+    "faction": "debuggers",
+    "attitude": 1,
+    "chat": "TALK_TEST_START",
+    "variables": { "test_template_str": "hello", "test_template_num": 42 }
   }
 ]

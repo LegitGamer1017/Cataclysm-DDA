@@ -29,6 +29,7 @@
 #include "line.h"
 #include "lru_cache.h"
 #include "map_scale_constants.h"
+#include "math_parser_diag_value.h"
 #include "memory_fast.h"
 #include "mission_companion.h"
 #include "npc_attack.h"
@@ -1756,6 +1757,8 @@ class npc_template
         std::optional<int> intl;
         std::optional<int> per;
         std::optional<npc_personality> personality;
+        // Dialogue/math variables applied to the NPC when it is spawned from this template.
+        std::unordered_map<std::string, diag_value> variables;
 
         static void load( const JsonObject &jsobj, std::string_view src );
         static void reset();

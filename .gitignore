@@ -330,6 +330,7 @@ weakpoint_hit_distribution.csv
 /data/mods/PlayingCards
 /data/mods/Zombies-have-CBM-for-DDA-Ito
 /data/mods/cdda-scps
+/data/mods/the_chorus
 
 # --- local workspace noise (not upstream) ---------------------------------
 # build-cmake/ is the CMake+Ninja tree DEV_SETUP documents; the ignore list had

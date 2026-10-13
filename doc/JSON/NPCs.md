@@ -206,6 +206,7 @@ This is the JSON that creates the NPC ID that is used to spawn an NPC in "mapgen
 | `chat`        | _(mandatory)_ Covered in the dialogue examples below.
 | `faction`     | Set faction NPC belongs to (see [FACTIONS.md](FACTIONS.md)).
 | `death_eocs`  | String `effect_on_condition` ids and/or inline `effect_on_condition`s (see [EFFECT_ON_CONDITION.md](EFFECT_ON_CONDITION.md)). When the npc dies all of these `eoc`s are run with the victim as u and the killer as npc.
+| `variables`   | Optional object of dialogue/math [variable](#variable-object) values applied to the NPC when it is spawned from this template. Keys are variable names; values may be strings or numbers, e.g. `{ "my_flag": "yes", "my_count": 3 }`. Applied after `npc_class` randomization, so the values are deterministic and can be read by dialogue conditions (`compare_string` with `{ "npc_val": ... }`, or math `n_my_count`). Values are stored concretely (like `u_add_var`); this differs from the `variables` field on item types, which keeps strings as legacy values.
 | `age`         | Set age of NPC.
 | `height`      | Set height of NPC. (in cm)
 | `str`         | Set strength of NPC.
@@ -1064,6 +1065,7 @@ Condition | Type | Description
 `"u_train_skills" or "npc_train_skills"` | simple string | `true` if u or the NPC has one or more skills with more levels than the player.
 `"u_train_styles" or "npc_train_styles"` | simple string | `true` if u or the NPC knows one or more martial arts styles that the player does not know.
 `"u_has_class" or "npc_has_class"` | string or [variable object](#variable-object) | `true` if u or the NPC's class id matches the provided string (e.g. `NC_BANDIT_TRADER`).
+`"u_has_faction" or "npc_has_faction"` | string or [variable object](#variable-object) | `true` if u or the NPC's faction id matches the provided string (e.g. `free_merchants`). Note `u_has_faction` resolves to the player, whose faction is always `your_followers`; use `npc_has_faction` to branch on a talker's cover faction.
 `"u_near_om_location" or "npc_near_om_location"`, (*optional* `range : `int or [variable object](#variable-object) ) | string or [variable object](#variable-object) | same as at_om_location except it checks in a square stretching from the character range OMT's. NOTE: can only check OMT's in the reality bubble (maximum of ~2 OMTs distance from player's position)
 `"u_aim_rule" or "npc_aim_rule"` | string or [variable object](#variable-object) | `true` if u or the NPC follower AI rule for aiming matches the string.
 `"u_engagement_rule" or "npc_engagement_rule"` | string or [variable object](#variable-object) | `true` if u or the NPC follower AI rule for engagement matches the string.

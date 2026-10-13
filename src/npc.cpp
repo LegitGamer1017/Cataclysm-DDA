@@ -539,6 +539,13 @@ void npc_template::load( const JsonObject &jsobj, std::string_view src )
     for( JsonValue jv : jsobj.get_array( "death_eocs" ) ) {
         guy.death_eocs.emplace_back( effect_on_conditions::load_inline_eoc( jv, src ) );
     }
+    // Read as concrete values (not legacy string references) so they behave like
+    // variables set at runtime via u_add_var/npc_add_var.
+    for( const JsonMember var : jsobj.get_object( "variables" ) ) {
+        diag_value value;
+        value._deserialize( var, false );
+        tem.variables.emplace( var.name(), std::move( value ) );
+    }
 
     npc_templates.emplace( guy.idz, std::move( tem ) );
 }
@@ -638,6 +645,12 @@ void npc::load_npc_template( const string_id<npc_template> &ident )
         add_new_mission( mission::reserve_new( miss_id, getID() ) );
     }
     death_eocs = tguy.death_eocs;
+
+    // Apply template-defined variables last so they override any values set by
+    // randomize()/load_new_character() EOCs (deterministic template state).
+    for( const std::pair<const std::string, diag_value> &var : tem.variables ) {
+        set_value( var.first, var.second );
+    }
 }
 
 npc::~npc() = default;
