@@ -924,6 +924,37 @@ TEST_CASE( "npc_faction_trust", "[npc_talk]" )
     CHECK( d.responses[3].text == "Start trade." );
 }
 
+TEST_CASE( "npc_faction_relation", "[npc_talk]" )
+{
+    dialogue d;
+    prep_test( d );
+
+    faction *fm = g->faction_manager_ptr->get( faction_id( "free_merchants" ) );
+    const faction_id target( "your_followers" );
+    const size_t kos = static_cast<size_t>( npc_factions::relationship::kill_on_sight );
+    fm->relations[target.str()].set( kos, false );
+
+    d.add_topic( "TALK_TEST_FACTION_RELATION" );
+    gen_response_lines( d, 3 );
+    CHECK( d.responses[0].text == "This is a basic test response." );
+    CHECK( d.responses[1].text == "Set faction kill on sight." );
+    CHECK( d.responses[2].text == "Clear faction kill on sight." );
+
+    // Applying the "set" effect flips the flag, and the gated response then appears.
+    d.responses[1].success.apply( d );
+    REQUIRE( fm->has_relationship( target, npc_factions::relationship::kill_on_sight ) );
+
+    gen_response_lines( d, 4 );
+    CHECK( d.responses[0].text == "This is a basic test response." );
+    CHECK( d.responses[1].text == "Faction kills on sight." );
+    CHECK( d.responses[2].text == "Set faction kill on sight." );
+    CHECK( d.responses[3].text == "Clear faction kill on sight." );
+
+    // Applying the "clear" effect removes it again.
+    d.responses[3].success.apply( d );
+    CHECK_FALSE( fm->has_relationship( target, npc_factions::relationship::kill_on_sight ) );
+}
+
 TEST_CASE( "test_talk_meta", "[npc_talk]" )
 {
     dialogue d;

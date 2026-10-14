@@ -1871,6 +1871,7 @@ In monster groups, within the `"monsters"` array, you can define `"group"` objec
 | `ends`            | (_optional_) This entry becomes inactive after this much time multiplied by the evolution scaling factor.  Specified using time units (See [Time duration](#time-duration)).
 | `spawn_data`      | (_optional_) Any properties that the monster only has when spawned in this group. `ammo` defines how much of which ammo types the monster spawns with. Only applies to "monster" type entries.
 | `event`           | (_optional_) If present, this entry can only spawn during the specified event. See the `holiday` enum for possible values. Defaults to `none`. (Ex: `"event": "halloween"`)
+| `eoc`             | (_optional_) An inline `effect_on_condition` object, or the ID of one. When present, this entry is only eligible while the EOC's `condition` evaluates true against the **avatar** (so it can gate spawns on player state — variables, math, mutations, and so on). Mirrors the `overmap_special` `eoc` field. A gated entry whose condition cannot be evaluated is skipped. (Ex: `"eoc": "EOC_MY_GATE"` or `"eoc": { "condition": { "math": [ "u_my_var >= 3" ] } }`) |
 
 ```jsonc
 // Example of a monstergroup containing only "monster" entries:

@@ -400,6 +400,45 @@ void faction_trust_ass( double val, dialogue &d, char /* scope */,
     fac->trusts_u = val;
 }
 
+// faction_relation('actor_faction', 'target_faction', 'relationship') -> 1/0
+// Reads or (as an assignment) sets a relation flag the actor faction holds toward the
+// target faction. Unlike the dialogue-scoped u_set_fac_relation, this works anywhere.
+// Returns nullopt (and logs) for an unknown relationship name, so a typo is surfaced
+// consistently whether it is read or written.
+static std::optional<npc_factions::relationship> faction_relation_flag( const std::string &flag )
+{
+    const auto it = npc_factions::relation_strs.find( flag );
+    if( it == npc_factions::relation_strs.end() ) {
+        debugmsg( "faction_relation: unknown relationship '%s'", flag.c_str() );
+        return std::nullopt;
+    }
+    return it->second;
+}
+
+double faction_relation_eval( const_dialogue const &d, char /* scope */,
+                              std::vector<diag_value> const &params, diag_kwargs const & /* kwargs */ )
+{
+    faction *fac = g->faction_manager_ptr->get( faction_id( params[0].str( d ) ) );
+    const faction_id target( params[1].str( d ) );
+    const std::optional<npc_factions::relationship> flag = faction_relation_flag( params[2].str( d ) );
+    if( !flag ) {
+        return 0.0;
+    }
+    return fac->has_relationship( target, *flag ) ? 1.0 : 0.0;
+}
+
+void faction_relation_ass( double val, dialogue &d, char /* scope */,
+                           std::vector<diag_value> const &params, diag_kwargs const & /* kwargs */ )
+{
+    faction *fac = g->faction_manager_ptr->get( faction_id( params[0].str( d ) ) );
+    const std::string target = params[1].str( d );
+    const std::optional<npc_factions::relationship> flag = faction_relation_flag( params[2].str( d ) );
+    if( !flag ) {
+        return;
+    }
+    fac->relations[target].set( static_cast<size_t>( *flag ), val != 0 );
+}
+
 double faction_food_supply_eval( const_dialogue const &d, char /* scope */,
                                  std::vector<diag_value> const &params, diag_kwargs const &kwargs )
 {
@@ -1904,6 +1943,7 @@ std::map<std::string_view, dialogue_func> const dialogue_funcs{
     { "faction_like", { "g", 1, faction_like_eval, faction_like_ass } },
     { "faction_respect", { "g", 1, faction_respect_eval, faction_respect_ass } },
     { "faction_trust", { "g", 1, faction_trust_eval, faction_trust_ass } },
+    { "faction_relation", { "g", 3, faction_relation_eval, faction_relation_ass } },
     { "faction_food_supply", { "g", 1, faction_food_supply_eval, {}, { "vitamin" } } },
     { "faction_wealth", { "g", 1, faction_wealth_eval, faction_wealth_ass } },
     { "faction_power", { "g", 1, faction_power_eval, faction_power_ass } },

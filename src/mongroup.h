@@ -38,6 +38,10 @@ struct MonsterGroupEntry {
     time_duration starts;
     time_duration ends;
     holiday event;
+    // Optional gate: when set, this entry is only eligible while the inline/referenced
+    // EOC's condition holds against the avatar. Mirrors overmap_special's "eoc" field.
+    effect_on_condition_id condition_eoc;
+    bool has_condition = false;
     bool lasts_forever() const {
         return ends <= 0_turns;
     }
@@ -96,6 +100,8 @@ struct MonsterGroup {
     FreqDef monsters;
     bool IsMonsterInGroup( const mtype_id &id ) const;
     bool is_animal = false;
+    /* True if any entry in this group carries a condition gate (avoids building a dialogue needlessly). */
+    bool has_conditions = false;
 
     /*replaces this group after a period of time when exploring an unexplored portion of the map. Used for monster evolution. */
     bool replace_monster_group = false;

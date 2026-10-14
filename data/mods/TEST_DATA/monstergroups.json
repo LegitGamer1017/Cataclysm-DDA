@@ -116,5 +116,23 @@
       { "monster": "mon_test_CBM", "pack_size": [ 4, 6 ], "ends": "8 days" },
       { "monster": "mon_test_zombie_cop", "pack_size": [ 4, 6 ], "conditions": [ "DAY" ] }
     ]
+  },
+  {
+    "//": "Gate passes, so the only entry is always spawnable.",
+    "id": "test_condition_mongroup",
+    "type": "monstergroup",
+    "default": "mon_null",
+    "monsters": [
+      { "monster": "mon_test_CBM", "weight": 100, "eoc": "EOC_TEST_GATE_TRUE" }
+    ]
+  },
+  {
+    "//": "Gate fails, so the only entry is always skipped and the default is returned.",
+    "id": "test_condition_mongroup_blocked",
+    "type": "monstergroup",
+    "default": "mon_null",
+    "monsters": [
+      { "monster": "mon_test_CBM", "weight": 100, "eoc": "EOC_TEST_GATE_FALSE" }
+    ]
   }
 ]

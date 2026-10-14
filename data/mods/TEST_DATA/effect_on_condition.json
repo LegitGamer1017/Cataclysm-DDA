@@ -234,5 +234,15 @@
         "else": { "math": [ "eoc_compare_string_match_all_test_5++" ] }
       }
     ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_GATE_TRUE",
+    "condition": { "mod_is_loaded": "test_data" }
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_GATE_FALSE",
+    "condition": { "mod_is_loaded": "test_gate_mod_never_loaded" }
   }
 ]

@@ -429,3 +429,35 @@ TEST_CASE( "mongroup_multi_spawn_restrictions", "[mongroup]" )
         CHECK( counts.count( mon_test_zombie_cop ) > 0 );
     }
 }
+
+TEST_CASE( "Condition-gated_monstergroup_entries", "[mongroup]" )
+{
+    // Each group has a single entry carrying an EOC gate. The condition is evaluated
+    // against the avatar; EOC_TEST_GATE_TRUE passes and EOC_TEST_GATE_FALSE does not.
+    const mongroup_id allowed( "test_condition_mongroup" );
+    const mongroup_id blocked( "test_condition_mongroup_blocked" );
+
+    for( int i = 0; i < 100; i++ ) {
+        // The gate passes, so the only entry is always spawnable.
+        CHECK( MonsterGroupManager::GetResultFromGroup( allowed ).front().id == mon_test_CBM );
+    }
+    for( int i = 0; i < 100; i++ ) {
+        // The gate fails, so the entry is skipped and the group default is returned.
+        CHECK( MonsterGroupManager::GetResultFromGroup( blocked ).front().id == mon_null );
+    }
+}
+
+TEST_CASE( "Condition-gated_monstergroup_random_pick", "[mongroup]" )
+{
+    // GetRandomMonsterFromGroup (used by u_spawn_monster group spawns, spells, monster
+    // upgrades and revives) must honor the same per-entry gate as GetResultFromGroup.
+    const mongroup_id allowed( "test_condition_mongroup" );
+    const mongroup_id blocked( "test_condition_mongroup_blocked" );
+
+    for( int i = 0; i < 100; i++ ) {
+        CHECK( MonsterGroupManager::GetRandomMonsterFromGroup( allowed ) == mon_test_CBM );
+    }
+    for( int i = 0; i < 100; i++ ) {
+        CHECK( MonsterGroupManager::GetRandomMonsterFromGroup( blocked ) == mon_null );
+    }
+}

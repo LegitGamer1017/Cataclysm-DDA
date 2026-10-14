@@ -1232,6 +1232,17 @@
   },
   {
     "type": "talk_topic",
+    "id": "TALK_TEST_FACTION_RELATION",
+    "dynamic_line": "This is a test conversation that shouldn't appear in the game.",
+    "responses": [
+      { "text": "This is a basic test response.", "topic": "TALK_DONE" },
+      { "text": "Faction kills on sight.", "topic": "TALK_DONE", "condition": { "math": [ "faction_relation('free_merchants','your_followers','kill on sight') == 1" ] } },
+      { "text": "Set faction kill on sight.", "topic": "TALK_DONE", "effect": { "math": [ "faction_relation('free_merchants','your_followers','kill on sight') = 1" ] } },
+      { "text": "Clear faction kill on sight.", "topic": "TALK_DONE", "effect": { "math": [ "faction_relation('free_merchants','your_followers','kill on sight') = 0" ] } }
+    ]
+  },
+  {
+    "type": "talk_topic",
     "id": "TALK_TEST_META",
     "dynamic_line": "This is a test conversation that shouldn't appear in the game.",
     "responses": [

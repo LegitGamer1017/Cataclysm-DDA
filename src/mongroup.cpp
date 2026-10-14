@@ -1,18 +1,23 @@
 #include "mongroup.h"
 
 #include <algorithm>
+#include <optional>
 #include <string>
 #include <utility>
 
+#include "avatar.h"
 #include "calendar.h"
 #include "cata_utility.h"
 #include "debug.h"
+#include "dialogue.h"
+#include "effect_on_condition.h"
 #include "enum_conversions.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "mtype.h"
 #include "options.h"
 #include "rng.h"
+#include "talker.h"
 #include "units.h"
 
 //  Frequency: If you don't use the whole 1000 points of frequency for each of
@@ -120,7 +125,7 @@ float mongroup::avg_speed() const
 
 static bool is_spawn_valid(
     const MonsterGroupEntry &entry, const time_point &sunset, const time_point &sunrise,
-    const season_type season, const bool can_spawn_events )
+    const season_type season, const bool can_spawn_events, const dialogue *d )
 {
     // If an event was specified for this entry, check if it matches the current holiday
     if( entry.event != holiday::none && ( !can_spawn_events ||
@@ -188,7 +193,24 @@ static bool is_spawn_valid(
         return false;
     }
 
+    // Optional per-entry EOC gate, evaluated against the avatar. A gated entry whose
+    // condition cannot be evaluated (no dialogue) is skipped (fail closed).
+    if( entry.has_condition && ( d == nullptr || !entry.condition_eoc->test_condition( *d ) ) ) {
+        return false;
+    }
+
     return true;
+}
+
+// Builds the dialogue used to evaluate per-entry EOC gates, or returns nullptr when the
+// group has no gated entries. Built on demand so ungated groups pay nothing.
+static const dialogue *gating_dialogue( const MonsterGroup &group, std::optional<dialogue> &holder )
+{
+    if( !group.has_conditions ) {
+        return nullptr;
+    }
+    holder.emplace( get_talker_for( get_avatar() ), nullptr );
+    return &*holder;
 }
 
 // Quantity is adjusted directly as a side effect of this function
@@ -209,10 +231,13 @@ std::vector<MonsterGroupResult> MonsterGroupManager::GetResultFromGroup(
     const season_type season = season_of_year( calendar::turn );
     std::string opt = get_option<std::string>( "EVENT_SPAWNS" );
     const bool can_spawn_events = opt == "monsters" || opt == "both";
+    // Only build a dialogue (needed to evaluate per-entry gates) when this group has any.
+    std::optional<dialogue> gating_d;
+    const dialogue *const gating = gating_dialogue( group, gating_d );
 
     // Step through spawn definitions from the monster group until one is found or
     for( const MonsterGroupEntry &entry : group.monsters ) {
-        if( !is_spawn_valid( entry, sunset, sunrise, season, can_spawn_events ) ) {
+        if( !is_spawn_valid( entry, sunset, sunrise, season, can_spawn_events, gating ) ) {
             continue;
         }
 
@@ -535,6 +560,15 @@ void MonsterGroupManager::LoadMonsterGroup( const JsonObject &jo )
                     new_mon_group.conditions.push_back( line );
                 }
             }
+            // Optional per-entry gate: an inline EOC object or a referenced EOC id.
+            // Mirrors the overmap_special "eoc" field.
+            if( mon.has_member( "eoc" ) ) {
+                const JsonValue eoc_val = mon.get_member( "eoc" );
+                new_mon_group.condition_eoc = effect_on_conditions::load_inline_eoc( eoc_val,
+                                              eoc_val.get_root_source_path() );
+                new_mon_group.has_condition = true;
+                g.has_conditions = true;
+            }
 
             g.event_freq[event] += freq;
             g.monsters.push_back( new_mon_group );
@@ -594,6 +628,9 @@ static void check_group_def( const mongroup_id &g )
         } else if( !m.mtype.is_valid() ) {
             debugmsg( "monster group %s contains unknown monster %s", g.c_str(), m.mtype.c_str() );
         }
+        if( m.has_condition && !m.condition_eoc.is_valid() ) {
+            debugmsg( "monster group %s contains unknown condition EOC %s", g.c_str(), m.condition_eoc.c_str() );
+        }
     }
 }
 
@@ -609,9 +646,15 @@ const mtype_id &MonsterGroupManager::GetRandomMonsterFromGroup( const mongroup_i
     int spawn_chance = rng( 1, group->event_adjusted_freq_total() );
     std::string opt = get_option<std::string>( "EVENT_SPAWNS" );
     const bool can_spawn_events = opt == "monsters" || opt == "both";
+    std::optional<dialogue> gating_d;
+    const dialogue *const gating = gating_dialogue( group.obj(), gating_d );
     for( const MonsterGroupEntry &monster_type : group->monsters ) {
         if( monster_type.event != holiday::none && ( !can_spawn_events ||
                 monster_type.event != get_holiday_from_time() ) ) {
+            continue;
+        }
+        if( monster_type.has_condition && ( gating == nullptr ||
+                                            !monster_type.condition_eoc->test_condition( *gating ) ) ) {
             continue;
         }
         if( monster_type.frequency >= spawn_chance ) {
