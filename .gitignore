@@ -331,6 +331,7 @@ weakpoint_hit_distribution.csv
 /data/mods/Zombies-have-CBM-for-DDA-Ito
 /data/mods/cdda-scps
 /data/mods/the_chorus
+/data/mods/continuity_commission
 
 # --- local workspace noise (not upstream) ---------------------------------
 # build-cmake/ is the CMake+Ninja tree DEV_SETUP documents; the ignore list had
